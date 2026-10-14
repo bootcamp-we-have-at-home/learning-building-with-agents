@@ -1,0 +1,194 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 9: Project, a single-page app from two public APIs, built by an agent</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Lesson 9: Project, a single-page app from two public APIs, built by an agent</h1>
+<p class="subtitle">About 30 minutes to read, then about 15 to 18 hours of project work across the module, Module 1 <span class="strand project">Project</span><span class="strand craft">Agent craft</span></p>
+
+<p class="why">The project is the GSG week 3 API project, and the difference is that an agent writes the code while you write the spec, set the rules and check the result. Your mentor grades the documents you produce and your review notes, because those show the judgment that employers hire for.</p>
+
+<h2>What the GSG brief asks for</h2>
+
+<p>The GSG project brief (<code>learning-code/curriculum/coursebook/week-3/project.md</code>) asks for a simple web app, ideally a single page, that queries at least two APIs and uses the results to update the page. You choose what to build, and the brief keeps its requirements short.</p>
+
+<p>The requirements from the brief, which you keep, are these:</p>
+<ul>
+  <li>The app queries at least two APIs and shows dynamic content.</li>
+  <li>The README documents the user journey and the key decisions about how the code is structured.</li>
+  <li>The JavaScript is split into small functions with a clear input and output, and the pure functions have tests. The brief doesn't expect tests on the DOM or on API responses.</li>
+  <li>The design is responsive and mobile-first.</li>
+  <li>Any private API key is kept out of the published code.</li>
+</ul>
+
+<p class="aside">The coursebook asks for <code>XMLHttpRequest</code>. Today we write <code>fetch()</code>, which lesson 8 covered, or ky if your decision record chose it.</p>
+
+<p>The brief also lists checks to make before you choose an API. Each check now links to a lesson in this module:</p>
+<table>
+  <tr><th>Check from the brief</th><th>How you check it</th><th>Lesson</th></tr>
+  <tr><td>Are there issues with CORS requests?</td><td>Make one request from a page in the browser, and read the Network tab and the console.</td><td>Lesson 7</td></tr>
+  <tr><td>Is the rate limit high enough?</td><td>Read the API docs, and look for a <code>429</code> status or rate limit headers in a response.</td><td>Lesson 6</td></tr>
+  <tr><td>Is a free API key available?</td><td>Read the docs. A key in browser code is public, so prefer APIs that need no key.</td><td>Lessons 7 and 8</td></tr>
+  <tr><td>Can you use it without user login (OAuth)?</td><td>Read the docs. Skip APIs that need each user to log in.</td><td>Module 4</td></tr>
+  <tr><td>Is good documentation available?</td><td>Check that every endpoint you plan to use is in the docs, with an example response.</td><td>Lesson 4</td></tr>
+</table>
+
+<p>A static site has no server, so every file you publish, including any API key in it, can be read by anyone who opens the page. The GSG brief notes that a private key rules out GitHub Pages, and Module 2 moves API calls to a server so the key can stay secret. For this project, choose two APIs that need no key, or that issue a key meant for use in browser code.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>Here are two app ideas that fit the brief with two APIs. The first is a trip planner that shows the weather for a city and a list of nearby sights. The second is a book page that shows a book's details from one API and its author's biography from another.</p>
+<p>The <a href="https://github.com/public-apis/public-apis">public-apis list</a> marks each API with whether it needs a key and whether it supports CORS. Treat those marks as a starting point and check them yourself, because the list can be out of date.</p>
+</details>
+<p class="read-more">Read more: <a href="https://gist.github.com/derzorngottes/3b57edc1f996dddcab25">the GSG note on hiding API keys</a>, and <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages">GitHub Docs, What is GitHub Pages?</a></p>
+
+<h2>How you and the agent split the work</h2>
+
+<p>In lesson 2 you learned to direct a session the way Thorsten Ball describes, where you decide the design and the agent fills in the code. In this project you write three documents before the agent writes any app code, and you keep all three in the repo, as lesson 3 explained.</p>
+
+<ol>
+  <li><strong><code>spec.md</code></strong> holds the user stories, in the form "As a ..., I want ..., so that ...". Each story has acceptance criteria that you can test, e.g., "When the city isn't found, the page shows a message and no error appears in the console".</li>
+  <li><strong><code>AGENTS.md</code></strong> holds the rules for every session, e.g., the commands to run the tests and the app, the file layout, "no new dependencies without asking", and "never put an API key in the code".</li>
+  <li><strong><code>docs/decisions/0001-http-client.md</code></strong> is the decision record from lesson 8.</li>
+</ol>
+
+<p>Each agent session then handles one user story. You start each session by pointing the agent at <code>spec.md</code> and the story, and you end it with proof and a commit, as lesson 2 described.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>A starting <code>AGENTS.md</code> for the project could look like this. Change the commands to match your project:</p>
+<pre><code># Weather and sights app
+
+Single-page app, plain HTML, CSS and JavaScript, no framework.
+The spec is in spec.md. Decisions are in docs/decisions/.
+
+## Commands
+- Run tests: npm test
+- Serve locally: npx serve .
+
+## Rules
+- Work on one user story per session, and name it in the commit message.
+- Put pure functions in src/logic.js and test them in src/logic.test.js.
+- Don't add a dependency without asking me first.
+- Never put an API key or token in any file.
+- Only call endpoints that appear in the API docs linked in spec.md.
+- Never weaken or delete a test to make it pass. Tell me instead.</code></pre>
+<p>A user story with acceptance criteria could look like this:</p>
+<pre><code>## Story 2: Weather for a city
+As a traveller, I want to type a city and see today's weather,
+so that I can decide what to pack.
+
+Acceptance criteria
+- Typing "Gaza" and pressing Enter shows the temperature in °C.
+- An unknown city shows "City not found" and no console error.
+- The request appears in the Network tab with status 200.</code></pre>
+</details>
+<p class="read-more">Read more: <a href="https://ampcode.com/notes/how-i-use-amp">Thorsten Ball, How I Use Amp</a>, and <a href="https://agents.md/">agents.md</a></p>
+
+<h2>Proof, review and the failures to look for</h2>
+
+<p>An agent will say a feature works, but your mentor will only accept evidence that it works. For each user story, save the proof in a <code>proof/</code> folder or paste it into the pull request.</p>
+
+<p>The proof for each user story comes from three places. First, a screenshot of the Network tab, or the output of <code>curl -v</code>, shows the request and the status code for each API, as you read them in lesson 5. Second, the test output shows that the pure functions pass. Third, a short note says which acceptance criteria you checked by hand in the browser.</p>
+
+<p>When all the stories are done, review the code in a fresh agent session that didn't write it. A fresh session has no memory of the choices it made, so it reads the code as someone else's code.</p>
+<pre><code>Run git diff on the whole project against the first commit.
+Review it as code someone else wrote, against spec.md and AGENTS.md.
+List every problem with the file, the line, and why it's a problem.
+Don't fix anything yet.</code></pre>
+
+<p>You then check each finding yourself, write your conclusions in <code>review.md</code>, and only then ask an agent to fix the findings you agree with. The failures below are the ones to look for first in this project:</p>
+<ul>
+  <li>An API key or token appears in a JavaScript file, an HTML file or the git history.</li>
+  <li>A CORS error was "fixed" with a wildcard header or a public proxy that you didn't approve, as lesson 7 described.</li>
+  <li>The code calls an endpoint or a query parameter that isn't in the API's docs.</li>
+  <li>A test was changed so that it can't fail, e.g., <code>expect(result).toBe(3)</code> became <code>expect(result).toBeDefined()</code>.</li>
+  <li>The agent added a dependency, retries on a <code>404</code>, or a <code>fetch()</code> call that never checks <code>response.ok</code>.</li>
+</ul>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>To search the whole git history for a key, and not only the current files, ask the agent to run the command below and show you the output. Replace <code>YOUR_KEY_PREFIX</code> with the first characters of your key:</p>
+<pre><code>git log -p --all | grep -n "YOUR_KEY_PREFIX"   # search every version of every file</code></pre>
+<p>A key that was committed and then deleted is still in the history, so deleting the line isn't enough. In that case you revoke the key with the API provider and create a new one.</p>
+</details>
+<p class="read-more">Read more: <a href="../reference/agent-failure-catalog.html">Agent failure catalog</a></p>
+
+<h2>Do it</h2>
+
+<p>The time for each step is an estimate, and the total is about 15 to 18 hours. Commit after every step, so you can review each change and undo it if you need to.</p>
+
+<ol class="steps">
+  <li>
+    <p>About 2 hours. Create the project repo inside the module folder from lesson 5, and choose two APIs with the checks in the table above.</p>
+<pre><code>mkdir -p ~/code/agents-lab/module-1/api-app   # project folder
+cd ~/code/agents-lab/module-1/api-app         # move into it
+git init                                      # start the repo
+npm init -y                                   # create package.json for tests</code></pre>
+    <p>You should now have an empty repo and a short note in <code>spec.md</code> that names both APIs and gives the result of each of the five checks.</p>
+  </li>
+  <li>
+    <p>About 2 hours. Write the user stories and acceptance criteria in <code>spec.md</code>, including the user journey that the GSG brief asks for. Write them yourself, without the agent.</p>
+    <p>You should now have three to five user stories, and every story has acceptance criteria that someone else could check.</p>
+  </li>
+  <li>
+    <p>About 1 hour. Write <code>AGENTS.md</code> and the decision record from lesson 8.</p>
+    <p>You should now see the agent mention your rules when you start a session and ask it "What are the rules for this repo?". If it can't name them, check that no <code>CLAUDE.md</code> file is hiding your <code>AGENTS.md</code>, as lesson 3 explained.</p>
+  </li>
+  <li>
+    <p>About 8 to 10 hours. Build the app one user story per session. Start each session with a prompt that names the story, the files, the edge cases and the proof you want.</p>
+<pre><code>Read spec.md and AGENTS.md. Implement story 2 only.
+Put the pure functions in src/logic.js with tests in src/logic.test.js.
+Edge cases: unknown city, empty input, API returns 429.
+When you're done, run npm test, and tell me exactly what to click in the browser to check each acceptance criterion.</code></pre>
+    <p>You should now have one commit per story, each with passing tests and its proof saved.</p>
+  </li>
+  <li>
+    <p>About 2 hours. Run the fresh-session review from the section above, write <code>review.md</code>, and fix the findings you agree with in new sessions.</p>
+    <p>You should now have a <code>review.md</code> that lists each finding and says whether you fixed it, rejected it, or left it for later, and why.</p>
+  </li>
+  <li>
+    <p>About 1 hour. Publish the app on <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site">GitHub Pages</a>, which hosts the HTML, CSS and JavaScript files from a repository. Push the repo to GitHub first, and confirm that no key is in the code or the history.</p>
+    <p>You should now be able to open the app at its <code>github.io</code> address on your phone.</p>
+  </li>
+</ol>
+
+<h2>Check yourself</h2>
+
+<p>Each item below is a finding from a review. Decide whether it blocks the hand-in, or whether you note it in <code>review.md</code> and move on.</p>
+
+<div class="classify" data-cats='["Blocks the hand-in","Note it and move on"]' data-prompt="How serious is the finding?">
+  <div class="item" data-answer="Blocks the hand-in" data-why="A key in published code is public to anyone who opens the page, so you revoke the key and remove it from the history before you publish."><p><code>app.js</code> contains the weather API key as a string.</p></div>
+  <div class="item" data-answer="Blocks the hand-in" data-why="The changed test can't fail, so it no longer proves the function works. Restore the original assertion and fix the code instead."><p>A test changed from <code>toBe(3)</code> to <code>toBeDefined()</code> in the last commit.</p></div>
+  <div class="item" data-answer="Blocks the hand-in" data-why="An endpoint that isn't in the docs may be invented by the agent or may stop working without notice, so check it against the docs."><p>The code calls <code>/v2/sights/nearby</code>, and the API docs don't list that path.</p></div>
+  <div class="item" data-answer="Note it and move on" data-why="Inconsistent names make the code harder to read, but the app still meets the spec, so the finding can wait for a later session."><p>Some functions use <code>getCity</code> and others use <code>fetchCityData</code> for similar work.</p></div>
+  <div class="item" data-answer="Blocks the hand-in" data-why="The GSG brief requires the user journey in the README, so the project isn't complete without it."><p>The README has no user journey.</p></div>
+</div>
+
+<h2>Hand-in checklist for your mentor</h2>
+<ul class="check">
+  <li><label><input type="checkbox"> The link to the GitHub repo</label></li>
+  <li><label><input type="checkbox"> <code>spec.md</code> with user stories, acceptance criteria and the user journey</label></li>
+  <li><label><input type="checkbox"> <code>AGENTS.md</code></label></li>
+  <li><label><input type="checkbox"> <code>docs/decisions/0001-http-client.md</code></label></li>
+  <li><label><input type="checkbox"> The <code>proof/</code> folder, or proof in each pull request</label></li>
+  <li><label><input type="checkbox"> <code>review.md</code> with every finding and what you did about it</label></li>
+  <li><label><input type="checkbox"> The GitHub Pages link</label></li>
+</ul>
+
+<div class="source">
+  <a href="https://github.com/public-apis/public-apis">public-apis on GitHub</a>. Use the list to choose your two APIs. For each candidate, read the "Auth" and "CORS" columns, then open the API's own docs to confirm them.
+</div>
+
+<div class="feedback-ask">When you finish, tell your teacher (the agent) two things. First, could you follow this project brief alone, on a scale of 1 to 5? Second, where did you get stuck, if anywhere? Your answers go into <code>feedback/module-1.md</code> and are used to improve the brief.</div>
+
+<div class="footer-nav">
+Reference: <a href="../reference/agent-session-checklist.html">Agent session checklist</a>, <a href="../reference/decision-record-template.html">Decision record template</a>, <a href="../reference/agent-failure-catalog.html">Agent failure catalog</a><br>
+Previous: <a href="0008-build-buy-or-self-host.html">Lesson 8, Deciding whether to build, buy or self-host</a><br>
+Next: Module 2, which is coming soon<br>
+Course: <a href="index.html">Course index</a><br>
+If anything is unclear, ask your teacher (the agent). For example, you could ask "Can you check whether these two APIs need a key and support CORS, and quote the lines from their docs?"
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script src="../assets/tooltip.js"></script>
+<script src="../assets/classify.js"></script>

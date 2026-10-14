@@ -1,0 +1,175 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 2: Directing one agent session from plan to proof</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Lesson 2: Directing one agent session from plan to proof</h1>
+<p class="subtitle">About 40 minutes, Module 0 <span class="strand craft">Agent craft</span></p>
+
+<p class="why">Teams that hire for agent work want developers who get correct, reviewed changes out of an agent, and who don't accept whatever the agent produces. You'll run one complete session, from a written plan to checked proof and a review, which is the routine that every later project in the course uses.</p>
+
+<h2>Give each session one task and a design</h2>
+
+<p>In lesson 1 you saw that the program sends the whole context to the model on every request, and that unrelated content in the context makes results worse. The first habit follows directly, which is to give each session exactly one task.</p>
+
+<p>Thorsten Ball, who works on the Amp coding agent, writes that "a lot of the problems" new users have can be traced back to "not starting new threads often enough" (<a href="https://ampcode.com/notes/how-i-use-amp">How I Use Amp</a>). A thread in Amp is a session, and the Amp documentation says "Use one thread per task" (<a href="https://ampcode.com/docs/threads">Amp threads</a>).</p>
+
+<p>The second habit is that you make the design decisions and the agent writes the code. Thorsten Ball describes his prompts this way: "I put in the numbers and the lines and the agent then goes and puts in the colors." He adds that "the agent doesn't make architectural decisions for me".</p>
+
+<p>A directed prompt gives the agent the decisions it shouldn't make on its own. A directed prompt usually covers these parts:</p>
+<ul>
+  <li>the goal, and the files where the change belongs</li>
+  <li>the design, e.g., the function's name, inputs and outputs</li>
+  <li>the edge cases, and the tests to add for each one</li>
+  <li>the limits and the proof, e.g., which files not to touch and what evidence to show at the end</li>
+</ul>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>A weak prompt leaves the design to the agent:</p>
+<pre><code>Add price formatting to the cart.</code></pre>
+<p>The agent has to guess the function name, the currency, how to handle zero and bad input, and whether to add tests. Each guess may be reasonable, but you didn't decide any of them, so you can't tell whether the result is what you wanted.</p>
+<p>A directed prompt for the same change was tested on 2026-10-14, and you'll use it in the Do it section:</p>
+<pre><code>Add a function formatPrice(cents) to cart.js and export it next to total.
+
+Design:
+- It takes a whole number of cents and returns a string with a dollar sign
+  and two decimals, e.g. formatPrice(1250) returns "$12.50".
+- Edge cases: formatPrice(0) returns "$0.00", formatPrice(5) returns "$0.05".
+- It throws a RangeError for negative numbers and a TypeError for anything
+  that is not an integer.
+
+Tests: add one test for each case above to cart.test.js. Run npm test.
+Do not edit package.json or add dependencies.
+Proof: paste the full npm test output at the end of your reply.</code></pre>
+</details>
+<p class="read-more">Read more: <a href="https://code.claude.com/docs/en/best-practices">Claude Code best practices</a>, which applies to other agent CLIs as well</p>
+
+<h2>Ask for proof, and check the proof yourself</h2>
+
+<p>An agent's final message often says that the work is done and the tests pass. The final message is model text, and lesson 1 showed that model text is only as reliable as the tool results behind it.</p>
+
+<p>Thorsten Ball asks the agent to "test everything, run through everything end to end", and to give him "irrefutable proof that it works" (<a href="https://ampcode.com/docs/using-amp/thorsten">How Thorsten uses Amp</a>, updated September 2026). Proof is output that you can check, e.g., the full output of a test run, a command you can run again, or a screenshot of the page.</p>
+
+<p>Your own sense of progress is also weak evidence. In a 2025 study by <a href="https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/">METR</a>, 16 experienced developers expected AI tools to speed them up by 24%, but they took 19% longer with the tools. After the study, they still believed the tools had sped them up by 20%.</p>
+
+<p>METR has since said that the 2025 numbers are out of date, because the tools improved (<a href="https://metr.org/blog/2026-02-24-uplift-update/">METR, February 2026</a>). The gap between what developers felt and what was measured is the part to remember, because it means you should judge an agent's work by evidence.</p>
+
+<p>The agent can only produce proof if it knows how to build and test the project. Thorsten Ball keeps those commands in a file called <code>AGENTS.md</code>: "Since what 'the build' is, is documented in the AGENTS.md, the agent will just run the command and then fix the errors." Lesson 3 covers <code>AGENTS.md</code> in full.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>The directed prompt above was given to an agent on 2026-10-14, and the agent ended its reply with the test output below. The output is useful proof, because you can run <code>npm test</code> yourself and compare.</p>
+<pre><code>✔ total adds price times quantity (0.756973ms)
+✔ formatPrice formats cents as dollars (0.140027ms)
+✔ formatPrice returns $0.00 for zero (0.119488ms)
+✔ formatPrice pads single-digit cents (0.153061ms)
+✔ formatPrice throws RangeError for negative numbers (0.317334ms)
+✔ formatPrice throws TypeError for non-integers (0.14178ms)
+ℹ tests 6
+ℹ pass 6
+ℹ fail 0</code></pre>
+<p>Test output proves that the tests pass, but it doesn't prove that the tests check the right things. A test that asserts nothing also passes. You still read the tests in the diff, which the next section covers, and Module 3 returns to agents that weaken tests.</p>
+</details>
+<p class="read-more">Read more: <a href="https://dora.dev/research/2025/dora-report/">DORA, State of AI-assisted Software Development 2025</a></p>
+
+<h2>Use git as the safety net, and review in a fresh session</h2>
+
+<p>You already use git to save versions of your work. With an agent, you commit before each session, so that every change the agent makes shows up in <code>git diff</code> and can be thrown away with <code>git restore</code>. Thorsten Ball writes that "the safety net is always version control".</p>
+
+<p>The session that wrote a change is a poor reviewer of it, because its context is full of its own reasoning and assumptions. A new session sees only the code. Thorsten Ball starts a fresh session with a prompt like "Run <code>git diff</code> to see the code someone else wrote. Review it thoroughly and give me a report".</p>
+
+<p>You then decide which findings are correct, because a reviewing agent can be wrong too. Small cleanup, e.g., removing debug statements, also goes in its own new session, and Thorsten Ball does the same.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>Suppose the review session reports that <code>formatPrice(1.5)</code> should throw a <code>TypeError</code> but no test checks it. You can confirm the finding by reading the test file. If it is correct, you give the fix to a new session with one directed sentence, and you check the new test output.</p>
+<p>Suppose instead the review session says that the function should accept strings like <code>"1250"</code>. Your design said it takes a whole number of cents, so the finding is wrong for your design, and you ignore it.</p>
+</details>
+<p class="read-more">Read more: <a href="https://git-scm.com/docs/git-restore">git restore documentation</a></p>
+
+<h2>Do it</h2>
+<ol class="steps">
+  <li>
+    <p>Go to the <code>tiny-shop</code> project from lesson 1, and commit it as the starting point.</p>
+<pre><code>cd ~/code/agents-lab/module-0/tiny-shop        # the project from lesson 1
+git init -b main                                # start a repository on a branch called main
+git add .                                       # stage all three files
+git commit -m "Add tiny-shop starting point"    # save the starting point</code></pre>
+    <p>You should now see a line that ends with <code>Add tiny-shop starting point</code>, followed by <code>3 files changed, 15 insertions(+)</code>.</p>
+  </li>
+  <li>
+    <p>Write a directed prompt for this task: add a function <code>formatPrice(cents)</code> to <code>cart.js</code> that returns a price string such as <code>"$12.50"</code>. Use the four parts from the list above, and choose the edge cases yourself before you look at the example in the first section.</p>
+    <p>You should now have a prompt that names the function, lists at least three edge cases, asks for a test for each one, and says what proof to show.</p>
+  </li>
+  <li>
+    <p>Start a new agent session in the <code>tiny-shop</code> folder, and give it your prompt.</p>
+    <p>You should now see the agent edit <code>cart.js</code> and <code>cart.test.js</code>, run <code>npm test</code>, and end with the test output.</p>
+  </li>
+  <li>
+    <p>Check the proof yourself, in your own terminal.</p>
+<pre><code>npm test                # run the tests yourself
+git diff --stat         # list which files changed and by how much</code></pre>
+    <p>You should now see the same number of passing tests that the agent reported, and only <code>cart.js</code> and <code>cart.test.js</code> in the list of changed files.</p>
+  </li>
+  <li>
+    <p>Start another new session, and ask it to review the change.</p>
+<pre><code>Run git diff to see the code someone else wrote.
+Review it thoroughly and give me a report.
+Don't change any files.</code></pre>
+    <p>You should now see a report. For each finding, write down whether it is correct for your design.</p>
+  </li>
+  <li>
+    <p>Keep the change, or throw it away. Before you throw anything away, run <code>git status</code> and read the list, because <code>git restore</code> deletes uncommitted changes and you can't get them back.</p>
+<pre><code>git status                                         # check which files would be affected</code></pre>
+    <p>To keep the change, commit it:</p>
+<pre><code>git commit -am "Add formatPrice for cart display"  # keep the change</code></pre>
+    <p>To throw the change away instead, run only this command:</p>
+<pre><code>git restore .                                      # discard all uncommitted changes</code></pre>
+    <p>You should now see a clean working tree when you run <code>git status</code> again.</p>
+  </li>
+</ol>
+
+<h2>Check yourself</h2>
+
+<p>Each item below is something an agent showed at the end of a session. Decide whether it is proof you can check or only a claim.</p>
+
+<div class="classify" data-cats='["Proof you can check","Claim without proof"]' data-prompt="Is it proof or a claim?">
+  <div class="item" data-answer="Claim without proof" data-why="The sentence is model text with no output behind it. Ask for the test output."><p>"All tests pass now."</p></div>
+  <div class="item" data-answer="Proof you can check" data-why="Full test output can be compared with your own npm test run."><pre><code>ℹ tests 6
+ℹ pass 6
+ℹ fail 0</code></pre></div>
+  <div class="item" data-answer="Claim without proof" data-why="The agent says what it did but shows nothing you can check."><p>"I verified that the function handles every edge case correctly."</p></div>
+  <div class="item" data-answer="Proof you can check" data-why="A command and its output can be run again by you, and you'll see the same result if the claim is true."><pre><code>$ node -e "console.log(require('./cart').formatPrice(5))"
+$0.05</code></pre></div>
+  <div class="item" data-answer="Claim without proof" data-why="The word 'should' means the agent didn't run the build. Ask it to run the build and show the output."><p>"The build should succeed with these changes."</p></div>
+</div>
+
+<div class="quiz"
+  data-q="An agent session has spent an hour on one bug and tried five fixes. What should you do next?"
+  data-opts='["Start a new session with a short summary","Keep going in the same session until fixed","Ask the same session to try much harder","Paste the full old transcript into another session"]'
+  data-answer="0"
+  data-why="The old context is full of failed attempts, which makes the next attempt worse. A new session with a short summary of what you know starts clean. Asking the same session to try harder doesn't change its context, and pasting the full transcript brings all the failed attempts into the new context. Lesson 3 shows how to write the summary."></div>
+
+<div class="quiz"
+  data-q="Why should a fresh session review the diff, and not the session that wrote it?"
+  data-opts='["It sees only the code, not the reasoning","A fresh session always runs a stronger model","The writing session cannot run git diff commands","Reviews in the same session cost more money"]'
+  data-answer="0"
+  data-why="The writing session's context holds its own reasoning, so it tends to agree with itself. A new session judges only the code. A new session uses the same model unless you change it, the writing session can run git diff, and the cost isn't the reason for the habit."></div>
+
+<div class="source">
+  <a href="https://ampcode.com/notes/how-i-use-amp">Thorsten Ball, How I Use Amp</a> (May 2025). The page says it was written for a much older version of Amp, so read it for the habits and not for the product features. The sections on new threads, version control and reviewing with <code>git diff</code> match this lesson.
+</div>
+
+<div class="feedback-ask">When you finish, tell your teacher (the agent) two things. First, could you follow this lesson alone, on a scale of 1 to 5? Second, where did you get stuck, if anywhere? Your answers go into <code>feedback/module-0.md</code> and are used to improve the lesson.</div>
+
+<div class="footer-nav">
+Reference: <a href="../reference/agent-session-checklist.html">Agent session checklist</a>, <a href="../reference/glossary.html">Glossary</a><br>
+Previous: <a href="0001-agent-model-tools-loop.html">Lesson 1, An agent is a model, a set of tools and a loop</a><br>
+Next: <a href="0003-knowledge-in-the-repo.html">Lesson 3, Keeping project knowledge in the repo and in saved sessions</a><br>
+Course: <a href="index.html">Course index</a><br>
+If anything is unclear, ask your teacher (the agent). For example, you could ask "How small should one task be before I give it its own session?"
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script src="../assets/tooltip.js"></script>
+<script src="../assets/classify.js"></script>

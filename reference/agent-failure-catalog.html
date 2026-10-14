@@ -1,0 +1,46 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent failure catalog</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Agent failure catalog</h1>
+<p class="subtitle">Each row is a way coding agents fail, with the symptom you see, the cause and the guardrail that prevents it. New modules add rows. You can use the rows as material for interview answers.</p>
+
+<h2>Module 0: directing agents</h2>
+<table>
+  <tr><th>Failure</th><th>Symptom</th><th>Cause</th><th>Guardrail</th><th>Lesson</th></tr>
+  <tr><td><strong>Claims without proof</strong></td><td>The agent says &quot;all tests pass&quot; and shows no output.</td><td>The model&#x27;s text isn&#x27;t backed by a tool result.</td><td>Ask for test output or a command you can rerun, and then rerun it yourself.</td><td><a href="../lessons/0002-directing-an-agent-session.html">2</a></td></tr>
+  <tr><td><strong>Polluted long session</strong></td><td>The agent repeats failed fixes, or old behaviour leaks into new work.</td><td>Failed attempts and unrelated tasks build up in the context.</td><td>Use one task per session, and restart with a short handoff note.</td><td><a href="../lessons/0001-agent-model-tools-loop.html">1</a></td></tr>
+  <tr><td><strong>Self-review bias</strong></td><td>The session that wrote the code approves its own diff.</td><td>Its context holds its own reasoning for every choice.</td><td>Review git diff in a fresh session, and judge each finding yourself.</td><td><a href="../lessons/0002-directing-an-agent-session.html">2</a></td></tr>
+  <tr><td><strong>Instructions silently ignored</strong></td><td>Claude Code doesn&#x27;t follow AGENTS.md.</td><td>A CLAUDE.md in the working directory or a parent directory takes precedence.</td><td>Check for the &quot;AGENTS.md loaded&quot; line at session start, and remove stray CLAUDE.md files.</td><td><a href="../lessons/0003-knowledge-in-the-repo.html">3</a></td></tr>
+  <tr><td><strong>Lost context</strong></td><td>A new session redoes or contradicts earlier decisions.</td><td>Every session starts with an empty context.</td><td>Write commit messages that say why, save transcripts, and write handoff notes.</td><td><a href="../lessons/0003-knowledge-in-the-repo.html">3</a></td></tr>
+  <tr><td><strong>Secret committed in a transcript</strong></td><td>Credentials appear in a saved session transcript.</td><td>Transcripts capture tool output, including printed secrets.</td><td>Read a transcript before you commit it, and use the tool&#x27;s sanitize option where it has one.</td><td><a href="../lessons/0003-knowledge-in-the-repo.html">3</a></td></tr>
+  <tr><td><strong>Outdated API</strong></td><td>The agent uses an option that the installed version removed or renamed.</td><td>The model learned an older version before its training cutoff.</td><td>Point the agent at the installed readme and type definitions, and ask it to quote them.</td><td><a href="../lessons/0004-learning-a-library-with-an-agent.html">4</a></td></tr>
+  <tr><td><strong>Invented API</strong></td><td>The agent calls a method that doesn&#x27;t exist, e.g., ky.fetchJson().</td><td>The model generates a plausible name.</td><td>Search the installed type definitions for the name before you accept the code.</td><td><a href="../lessons/0004-learning-a-library-with-an-agent.html">4</a></td></tr>
+</table>
+
+<h2>Module 1: HTTP and the browser</h2>
+<table>
+  <tr><th>Failure</th><th>Symptom</th><th>Cause</th><th>Guardrail</th><th>Lesson</th></tr>
+  <tr><td><strong>Disabled certificate check</strong></td><td>A TLS error disappears after the agent adds -k or NODE_TLS_REJECT_UNAUTHORIZED=0.</td><td>The agent turned off the check instead of fixing the certificate or host name.</td><td>Reject any change that disables verification, and fix the cause.</td><td><a href="../lessons/0005-reading-one-request.html">5</a></td></tr>
+  <tr><td><strong>Fix on the wrong system</strong></td><td>The agent edits route code after a TCP connection error.</td><td>The agent didn&#x27;t read which system failed.</td><td>Read the error number first, e.g., error 7 means nothing is listening.</td><td><a href="../lessons/0005-reading-one-request.html">5</a></td></tr>
+  <tr><td><strong>Retries on POST</strong></td><td>Duplicate orders or charges appear.</td><td>POST isn&#x27;t idempotent, so a retry repeats the action.</td><td>Allow automatic retries only on idempotent methods.</td><td><a href="../lessons/0006-http-methods-status-headers.html">6</a></td></tr>
+  <tr><td><strong>Error sent with status 200</strong></td><td>The front end treats failures as success.</td><td>The status line and the body disagree.</td><td>Require the status to match the result, and check response.ok.</td><td><a href="../lessons/0006-http-methods-status-headers.html">6</a></td></tr>
+  <tr><td><strong>Hand-parsed JSON body</strong></td><td>The agent works around an empty req.body by parsing the body manually.</td><td>The client didn&#x27;t send a Content-Type header.</td><td>Fix the header instead of the parser.</td><td><a href="../lessons/0006-http-methods-status-headers.html">6</a></td></tr>
+  <tr><td><strong>Wildcard CORS with cookies</strong></td><td>The browser still blocks the response after the agent adds Access-Control-Allow-Origin: *.</td><td>The wildcard is forbidden when the request carries credentials.</td><td>Name the exact origin and add Access-Control-Allow-Credentials: true.</td><td><a href="../lessons/0007-same-origin-and-cors.html">7</a></td></tr>
+  <tr><td><strong>CORS header on the wrong server</strong></td><td>The agent adds the header, and nothing changes.</td><td>The header must come from the server that the browser reads from.</td><td>Check in the Network tab which response is blocked.</td><td><a href="../lessons/0007-same-origin-and-cors.html">7</a></td></tr>
+  <tr><td><strong>Disabled browser security or public CORS proxy</strong></td><td>The app works only on one machine, or it sends keys through a stranger&#x27;s server.</td><td>The error is hidden, not fixed.</td><td>Call the third-party API from your own server (Module 2).</td><td><a href="../lessons/0007-same-origin-and-cors.html">7</a></td></tr>
+  <tr><td><strong>curl used as proof of a CORS fix</strong></td><td>The agent says &quot;curl works, so CORS is fixed&quot;.</td><td>curl ignores CORS, which only the browser enforces.</td><td>Prove it in the browser, or show the header in curl -i output.</td><td><a href="../lessons/0007-same-origin-and-cors.html">7</a></td></tr>
+  <tr><td><strong>Unasked dependency</strong></td><td>A new package appears in package.json for a small problem.</td><td>Agents install packages by default.</td><td>Add an AGENTS.md rule to ask first and show the signals, and write a decision record.</td><td><a href="../lessons/0008-build-buy-or-self-host.html">8</a></td></tr>
+  <tr><td><strong>Wrong or invented package name</strong></td><td>The install succeeds, but the npm page links to an unexpected repo.</td><td>The model guessed a package name.</td><td>Check the npm page and repo link before you approve the install.</td><td><a href="../lessons/0008-build-buy-or-self-host.html">8</a></td></tr>
+  <tr><td><strong>Unchecked fetch()</strong></td><td>The code continues with an error body after a 404 or 500.</td><td>fetch() doesn&#x27;t reject on HTTP error statuses.</td><td>Use a wrapper or ky, and check for response.ok in review.</td><td><a href="../lessons/0008-build-buy-or-self-host.html">8</a></td></tr>
+  <tr><td><strong>API key in front-end code</strong></td><td>A key string appears in app.js or in git history.</td><td>The agent copied the docs example directly into browser code.</td><td>Add an AGENTS.md rule, search with git log -p, and revoke any key that leaked.</td><td><a href="../lessons/0009-project-two-api-app.html">9</a></td></tr>
+  <tr><td><strong>Weakened test</strong></td><td>An assertion such as toBe(3) becomes toBeDefined().</td><td>The agent made the test pass instead of fixing the code.</td><td>Add an AGENTS.md rule, and read test changes in a fresh-session review.</td><td><a href="../lessons/0009-project-two-api-app.html">9</a></td></tr>
+  <tr><td><strong>Invented endpoint</strong></td><td>The code calls a path that isn&#x27;t in the API docs.</td><td>The model guessed a plausible URL.</td><td>Add an AGENTS.md rule to use only documented endpoints, and check each one.</td><td><a href="../lessons/0009-project-two-api-app.html">9</a></td></tr>
+</table>
+
+<div class="footer-nav">
+<a href="../lessons/index.html">Course index</a>, <a href="glossary.html">Glossary</a>, <a href="agent-failure-catalog.html">Agent failure catalog</a>, <a href="reading-http.html">Reading HTTP evidence</a>, <a href="agent-session-checklist.html">Agent session checklist</a>
+</div>

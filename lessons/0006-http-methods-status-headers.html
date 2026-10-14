@@ -1,0 +1,210 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 6: HTTP methods, status codes and headers</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Lesson 6: HTTP methods, status codes and headers</h1>
+<p class="subtitle">About 30 minutes, Module 1 <span class="strand systems">Systems model</span><span class="strand craft">Agent craft</span></p>
+
+<p class="why">Every API your agent calls or writes speaks in methods, status codes and headers, so you need to read them quickly to judge whether the agent's code tells the truth about what happened. You'll also learn to spot two mistakes that agents make often, which are retries on requests that are unsafe to repeat and errors reported with a success status.</p>
+
+<h2>The method says what the client wants the server to do</h2>
+
+<p>In lesson 5, curl sent the line <code>GET / HTTP/2</code>, and the word <code>GET</code> in that line is the method. The method tells the server what kind of action the client is asking for, and the path after it says which resource the action applies to.</p>
+
+<p>HTTP defines a small set of methods, and most APIs use the five in the table below. The "safe" and "idempotent" columns come from <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-common-method-properties">RFC 9110, section 9.2</a>, and the PATCH row comes from <a href="https://www.rfc-editor.org/rfc/rfc5789">RFC 5789</a>.</p>
+<table>
+  <tr><th>Method</th><th>Usual meaning</th><th>Safe</th><th>Idempotent</th></tr>
+  <tr><td><code>GET</code></td><td>Read a resource, e.g., <code>GET /products/7</code></td><td>Yes</td><td>Yes</td></tr>
+  <tr><td><code>POST</code></td><td>Create something or submit data, e.g., <code>POST /orders</code></td><td>No</td><td>No</td></tr>
+  <tr><td><code>PUT</code></td><td>Replace a resource with the body you send</td><td>No</td><td>Yes</td></tr>
+  <tr><td><code>PATCH</code></td><td>Change part of a resource</td><td>No</td><td>No</td></tr>
+  <tr><td><code>DELETE</code></td><td>Remove a resource</td><td>No</td><td>Yes</td></tr>
+</table>
+
+<p>A method is <span class="term" data-tip="RFC 9110 calls a method safe when the client does not request, and does not expect, any change on the server. GET, HEAD, OPTIONS and TRACE are safe.">safe</span> when the client asks only to read and expects no change on the server. A method is <span class="term" data-tip="RFC 9110 calls a method idempotent when sending the same request several times has the same intended effect on the server as sending it once. PUT, DELETE and the safe methods are idempotent.">idempotent</span> when sending the same request twice has the same intended effect as sending it once. For example, deleting product 7 twice still leaves product 7 deleted, but posting the same order twice creates two orders.</p>
+
+<p>The difference decides whether an automatic retry is harmless. RFC 9110 says a client can retry an idempotent request after a dropped connection, and it says a client "SHOULD NOT automatically retry a request with a non-idempotent method" unless it knows the request is safe to repeat. When an agent wraps a <code>POST /orders</code> call in automatic retries, a slow network can turn one customer order into two.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>The httpbin.org test service echoes back whatever you send. The following output was captured on 2026-10-14 with a <code>POST</code> that sent a JSON body. Some header lines are removed:</p>
+<pre><code>$ curl -i -X POST https://httpbin.org/post -H 'Content-Type: application/json' -d '{"name":"mug","price":12}'
+HTTP/2 200
+content-type: application/json
+
+{
+  "data": "{\"name\":\"mug\",\"price\":12}",
+  "json": {
+    "name": "mug",
+    "price": 12
+  },
+  "url": "https://httpbin.org/post"
+}</code></pre>
+<p>In the output above, the request's <code>Content-Type: application/json</code> header told the server how to read the body, so httpbin parsed the body and returned it under <code>"json"</code>.</p>
+<p>A server can also refuse a method. When curl sent <code>DELETE</code> to httpbin's <code>/get</code> path on the same day, the server answered with <code>HTTP/2 405</code> and the header <code>allow: OPTIONS, GET, HEAD</code>, which lists the methods the path accepts.</p>
+</details>
+<p class="read-more">Read more: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods">MDN, HTTP request methods</a>, <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">MDN, Idempotent</a></p>
+
+<h2>The status code says how the request went</h2>
+
+<p>The response in lesson 5 started with <code>HTTP/2 200</code>, and the number <code>200</code> is the status code. The first digit puts every status code in one of five classes, as defined in <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes">RFC 9110, section 15</a>:</p>
+<table>
+  <tr><th>Class</th><th>Meaning in RFC 9110</th><th>What to do next</th></tr>
+  <tr><td><code>1xx</code></td><td>Informational: the request was received and processing continues</td><td>You rarely see these in curl or in app code.</td></tr>
+  <tr><td><code>2xx</code></td><td>Successful: the request was received, understood and accepted</td><td>Use the response.</td></tr>
+  <tr><td><code>3xx</code></td><td>Redirection: the client must take a further action</td><td>Follow the <code>Location</code> header.</td></tr>
+  <tr><td><code>4xx</code></td><td>Client error: the request has bad syntax or can't be fulfilled</td><td>Change the request, because sending it again unchanged gets the same answer.</td></tr>
+  <tr><td><code>5xx</code></td><td>Server error: the server failed to fulfil a valid request</td><td>Look at the server. A retry may work if the failure was temporary.</td></tr>
+</table>
+
+<p>The codes in the next table cover most of what you'll see in your projects. The full list is on <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status">MDN's status code reference</a>.</p>
+<table>
+  <tr><th>Code</th><th>Name</th><th>Typical cause</th></tr>
+  <tr><td><code>200</code></td><td>OK</td><td>The request worked, and the body has the result.</td></tr>
+  <tr><td><code>201</code></td><td>Created</td><td>A <code>POST</code> created a new resource.</td></tr>
+  <tr><td><code>204</code></td><td>No Content</td><td>The request worked, and there is no body, e.g., after a <code>DELETE</code>.</td></tr>
+  <tr><td><code>301</code></td><td>Moved Permanently</td><td>The resource lives at the URL in the <code>Location</code> header.</td></tr>
+  <tr><td><code>400</code></td><td>Bad Request</td><td>The body or parameters are malformed or missing a field.</td></tr>
+  <tr><td><code>401</code></td><td>Unauthorized</td><td>The request has no valid credentials, e.g., a missing token.</td></tr>
+  <tr><td><code>403</code></td><td>Forbidden</td><td>The credentials are valid, but they don't allow this action.</td></tr>
+  <tr><td><code>404</code></td><td>Not Found</td><td>Nothing exists at this path.</td></tr>
+  <tr><td><code>405</code></td><td>Method Not Allowed</td><td>The path exists, but it doesn't accept this method.</td></tr>
+  <tr><td><code>429</code></td><td>Too Many Requests</td><td>You hit a rate limit, so wait before you try again.</td></tr>
+  <tr><td><code>500</code></td><td>Internal Server Error</td><td>The server's code failed, e.g., it threw an uncaught exception.</td></tr>
+  <tr><td><code>503</code></td><td>Service Unavailable</td><td>The server is overloaded or down for maintenance.</td></tr>
+</table>
+
+<p>Most APIs also put an explanation in the body of an error response. The following output was captured on 2026-10-14 from the GitHub API, for a repository that doesn't exist. Some header lines are removed:</p>
+<pre><code>$ curl -i https://api.github.com/repos/no-such-owner-zz9/nothing
+HTTP/2 404
+content-type: application/json; charset=utf-8
+x-ratelimit-limit: 60
+x-ratelimit-remaining: 59
+
+{
+  "message": "Not Found",
+  "documentation_url": "https://docs.github.com/rest/repos/repos#get-a-repository",
+  "status": "404"
+}</code></pre>
+<p>In the output above, the status line and the body agree that the repository wasn't found, and the body links to the documentation for the endpoint. Agreement between the status line and the body is what you want to see in any API, including the ones your agent writes.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>The GitHub API answered <code>401</code> on 2026-10-14 when curl asked for the current user without a token. The body says what is missing:</p>
+<pre><code>$ curl -i https://api.github.com/user
+HTTP/2 401
+content-type: application/json; charset=utf-8
+
+{
+  "message": "Requires authentication",
+  "documentation_url": "https://docs.github.com/rest",
+  "status": "401"
+}</code></pre>
+<p>A redirect looks different, because the important part is a header and the body is empty. The following output is from <code>curl -I http://github.com</code> on the same day:</p>
+<pre><code>HTTP/1.1 301 Moved Permanently
+Content-Length: 0
+Location: https://github.com/</code></pre>
+<p>In the output above, GitHub tells the client to use the <code>https://</code> address instead. Browsers follow the redirect on their own, but curl only follows it if you add the <code>-L</code> flag.</p>
+</details>
+<p class="read-more">Read more: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status">MDN, HTTP response status codes</a>, and <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes">RFC 9110, section 15</a> when you need the exact definition of one code</p>
+
+<h2>Headers describe the body and the request</h2>
+
+<p>You saw header lines in lesson 5, e.g., <code>content-type: text/html</code>. Headers are name and value pairs that travel before the body, and they carry information about the body, the client and the rules for caching. Header names are not case sensitive, so <code>Content-Type</code> and <code>content-type</code> are the same header.</p>
+
+<p>A few headers come up in almost every project, and the table below lists them with real values from the captures in this lesson. The full list is on <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers">MDN's header reference</a>.</p>
+<table>
+  <tr><th>Header</th><th>Sent by</th><th>What it says</th><th>Real example</th></tr>
+  <tr><td><code>Content-Type</code></td><td>Both</td><td>The format of the body</td><td><code>application/json; charset=utf-8</code></td></tr>
+  <tr><td><code>Authorization</code></td><td>Client</td><td>The credentials for the request, e.g., an API token</td><td><code>Bearer &lt;token&gt;</code></td></tr>
+  <tr><td><code>Cache-Control</code></td><td>Server</td><td>How long a client or proxy may reuse the response</td><td><code>public, max-age=60, s-maxage=60</code> from the GitHub API</td></tr>
+  <tr><td><code>Location</code></td><td>Server</td><td>Where a redirected or newly created resource lives</td><td><code>https://github.com/</code></td></tr>
+  <tr><td><code>Set-Cookie</code></td><td>Server</td><td>A cookie for the browser to store and send back. Module 4 covers cookies.</td><td>Not shown here</td></tr>
+</table>
+
+<p>APIs also add their own headers. For example, GitHub sends <code>x-ratelimit-limit: 60</code> and <code>x-ratelimit-remaining: 59</code> to anonymous clients, so you can see how many requests you have left in the current hour before you get a <code>403</code> or <code>429</code> (<a href="https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api">GitHub, rate limits for the REST API</a>).</p>
+
+<p>An agent sometimes writes a server that always answers <code>200</code> and puts the error inside the body, e.g., <code>{"error": "Product not found"}</code>. The status line then says the request succeeded while the body says it failed, so every client, cache and monitoring tool that reads the status line gets the wrong answer.</p>
+
+<p>The mistake also hides errors in the browser. The <code>fetch()</code> function only rejects its promise on a network failure, and for any status it resolves and sets <code>response.ok</code> to true for codes 200 to 299 (<a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch">MDN, fetch</a>). Front-end code that checks <code>response.ok</code> therefore treats a <code>200</code> with an error body as a success.</p>
+<pre><code>// What the agent wrote: the status line says success
+res.status(200).json({ error: "Product not found" });
+
+// What you ask for instead: the status line and the body agree
+res.status(404).json({ error: "Product not found" });</code></pre>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>The same <code>Content-Type</code> header can change how a server reads a request. When you send JSON without <code>Content-Type: application/json</code>, many servers, including Express with its <code>express.json()</code> parser, skip the body, so your handler finds <code>req.body</code> empty or undefined. An agent that "fixes" the empty body by parsing the raw text by hand is working around a missing header instead of adding it.</p>
+<p>Another example is the <code>Cache-Control</code> value in the table. GitHub allows a response to be reused for 60 seconds, so two requests for the same repository a few seconds apart can return the same data even if the repository changed in between. When an agent reports that "the API returns stale data", check the cache headers before you let it change any code.</p>
+</details>
+<p class="read-more">Read more: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers">MDN, HTTP headers</a>, <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching">MDN, HTTP caching</a></p>
+
+<h2>Do it</h2>
+<ol class="steps">
+  <li>
+    <p>Go to the practice folder that you created in lesson 5.</p>
+<pre><code>cd ~/code/agents-lab/module-1   # the folder from lesson 5</code></pre>
+    <p>You should now see <code>trace.txt</code> from lesson 5 when you run <code>ls</code>.</p>
+  </li>
+  <li>
+    <p>Request a GitHub repository that doesn't exist, and include the response headers in the output.</p>
+<pre><code>curl -i https://api.github.com/repos/no-such-owner-zz9/nothing   # -i prints the status line and headers before the body</code></pre>
+    <p>You should now see <code>HTTP/2 404</code> on the first line, a <code>content-type</code> header that says JSON, and a body whose <code>message</code> is <code>"Not Found"</code>.</p>
+  </li>
+  <li>
+    <p>Open your coding agent in the same folder and give it this prompt:</p>
+<pre><code>Use curl -i to call these two URLs:
+https://api.github.com/repos/expressjs/express
+https://api.github.com/user
+For each one, tell me the status code and what its class means,
+the Content-Type, and the value of x-ratelimit-remaining.
+Quote the exact header lines you used.</code></pre>
+    <p>You should now see the agent report <code>200</code> for the first URL and <code>401</code> for the second, with <code>x-ratelimit-remaining</code> lower on the second call than on the first. Check one quoted header line against the agent's own curl output before you accept the report.</p>
+  </li>
+</ol>
+
+<h2>Check yourself</h2>
+
+<p>Answer from memory first, because recalling the answer is what makes it stick.</p>
+
+<div class="classify" data-cats='["200","201","400","401","404","500"]' data-prompt="Which status code should the server send?">
+  <div class="item" data-answer="201" data-why="The request created a new resource, and 201 Created says exactly that."><p>A <code>POST /products</code> request adds a new product to the database.</p></div>
+  <div class="item" data-answer="400" data-why="The client sent a malformed request, so the client has to change it. 400 Bad Request covers missing or invalid fields."><p>A <code>POST /products</code> request arrives without the required <code>price</code> field.</p></div>
+  <div class="item" data-answer="401" data-why="No valid credentials were sent. 403 would mean the credentials were valid but not allowed to do this."><p>A request to <code>GET /cart</code> arrives with no token at all.</p></div>
+  <div class="item" data-answer="404" data-why="The path is well formed, but there is no resource with that id."><p>A request asks for <code>GET /products/9999</code>, and no product has id 9999.</p></div>
+  <div class="item" data-answer="500" data-why="The client's request was valid, and the server's own code failed, so the error belongs in the 5xx class."><p>The route handler throws an uncaught exception because of a bug in the server code.</p></div>
+  <div class="item" data-answer="200" data-why="The request was a valid read, and the body has the result."><p>A <code>GET /products</code> request returns the list of products.</p></div>
+</div>
+
+<div class="classify" data-cats='["Repeating is harmless","Repeating may duplicate"]' data-prompt="The connection drops before the response arrives. Is it harmless for the agent's code to send the same request again automatically?">
+  <div class="item" data-answer="Repeating is harmless" data-why="GET is safe and idempotent, because it only reads."><p><code>GET /products?page=2</code></p></div>
+  <div class="item" data-answer="Repeating may duplicate" data-why="POST is not idempotent. If the first request reached the server, a second one creates a second order."><p><code>POST /orders</code> with the contents of a cart</p></div>
+  <div class="item" data-answer="Repeating is harmless" data-why="PUT is idempotent. Replacing user 7 with the same body twice leaves the same result."><p><code>PUT /users/7</code> with the user's full profile in the body</p></div>
+  <div class="item" data-answer="Repeating is harmless" data-why="DELETE is idempotent. The second request may get a 404, but the server ends up in the same state."><p><code>DELETE /cart/items/3</code></p></div>
+  <div class="item" data-answer="Repeating may duplicate" data-why="POST is not idempotent, and a repeated payment request can charge the customer twice."><p><code>POST /payments</code> to charge a card</p></div>
+</div>
+
+<div class="quiz"
+  data-q="An agent wrote a handler that answers a missing product with res.status(200).json({ error: &quot;Product not found&quot; }). The front end checks response.ok. What happens?"
+  data-opts='["The front end treats the error as success","The fetch promise rejects with a network TypeError","The browser shows its own 404 page instead","Express changes the status to a 404 automatically"]'
+  data-answer="0"
+  data-why="A status of 200 sets response.ok to true, so the front end treats the error body as a normal result. The fetch promise only rejects on network failures, so it doesn't reject here. The browser doesn't replace fetch responses with error pages. Express sends the status the handler sets, and it doesn't read the body to change it."></div>
+
+<div class="source">
+  <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview">MDN, Overview of HTTP</a>. Read the "HTTP Messages" section, which shows the request and response formats that you read in this lesson. Use <a href="https://www.rfc-editor.org/rfc/rfc9110.html">RFC 9110</a> only to look up the exact meaning of one method, status code or header.
+</div>
+
+<div class="feedback-ask">When you finish, tell your teacher (the agent) two things. First, could you follow this lesson alone, on a scale of 1 to 5? Second, where did you get stuck, if anywhere? Your answers go into <code>feedback/module-1.md</code> and are used to improve the lesson.</div>
+
+<div class="footer-nav">
+Reference: <a href="../reference/reading-http.html">Reading HTTP evidence</a>, <a href="../reference/glossary.html">Glossary</a><br>
+Previous: <a href="0005-reading-one-request.html">Lesson 5, Reading one request across five systems</a><br>
+Next: <a href="0007-same-origin-and-cors.html">Lesson 7, Why the browser blocks some requests, with same-origin and CORS</a><br>
+Course: <a href="index.html">Course index</a><br>
+If anything is unclear, ask your teacher (the agent). For example, you could ask "When should my API answer 401, and when should it answer 403?"
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script src="../assets/tooltip.js"></script>
+<script src="../assets/classify.js"></script>

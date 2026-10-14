@@ -1,0 +1,190 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 4: Learning a new library with an agent, from its docs and source</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Lesson 4: Learning a new library with an agent, from its docs and source</h1>
+<p class="subtitle">About 40 minutes, Module 0 <span class="strand craft">Agent craft</span><span class="strand buy">Build, then buy</span></p>
+
+<p class="why">Agents write code for the version of a library they saw in training, so they make confident mistakes with libraries that are new or have changed since then. You need to understand a library well enough to catch those mistakes, and an agent can teach you that quickly if you point it at the right sources.</p>
+
+<h2>A model knows a library as it was when its training data ended</h2>
+
+<p>In lesson 1 you saw that the model works from two things, the text in its context and what it learned in training. The training data stops at a date called the <span class="term" data-tip="Training cutoff: the date after which the model saw no new data. Anything that changed after that date is unknown to the model unless it is put into the context.">training cutoff</span>, and the model knows nothing that happened after it.</p>
+
+<p>Libraries keep changing after that date. When the agent writes code for a library that has changed, it writes the old API with the same confidence as a correct one, and nothing in its answer warns you.</p>
+
+<p>The library <a href="https://github.com/sindresorhus/ky">ky</a> is a real example. Ky is a small wrapper around <code>fetch</code>, and you'll decide between ky and plain <code>fetch</code> in lesson 8. In ky version 1, the option for a base address was called <code>prefixUrl</code>. Version 2.0.0, released on 2026-04-06, renamed it to <code>prefix</code> and added a new <code>baseUrl</code> option (<a href="https://github.com/sindresorhus/ky/releases/tag/v2.0.0">ky v2.0.0 release</a>).</p>
+
+<p>An agent trained mostly on ky 1 code will write <code>prefixUrl</code>. With ky 2.2.0 installed, the result is the error below, captured on 2026-10-14:</p>
+<pre><code>The `prefixUrl` option has been renamed `prefix` in v2 and enhanced to allow slashes in input.
+See also the new `baseUrl` option for improved flexibility with standard URL resolution:
+https://github.com/sindresorhus/ky#baseurl</code></pre>
+
+<p>Ky's authors wrote a helpful error for the old name, but many libraries ignore an option they don't know. In that case the code runs without an error and does the wrong thing, and only a test or a careful reader notices.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>The npm registry shows the dates of each ky release. The output below was captured on 2026-10-14 with <code>npm view ky time --json</code> and shortened:</p>
+<pre><code>"1.14.3": "2026-01-25T17:30:20.212Z",   # last version 1 release
+"2.0.0":  "2026-04-06T08:00:06.813Z",   # the release that renamed prefixUrl
+"2.2.0":  "2026-10-09T06:32:47.556Z"    # the current version</code></pre>
+<p>An agent can also invent a method that never existed. For example, an answer that uses <code>ky.fetchJson(url)</code> looks plausible, but no ky version has that method. The installed type definitions, <code>node_modules/ky/distribution/index.d.ts</code>, list every method, so a search there settles the question in a few seconds.</p>
+</details>
+<p class="read-more">Read more: <a href="https://github.com/sindresorhus/ky/releases">ky release notes</a></p>
+
+<h2>Point the agent at the version you have installed</h2>
+
+<p>When you ask the agent about a library, tell it which sources to read before it answers. The best sources describe the exact version in your project, and each source below is closer to the installed code than the one after it.</p>
+
+<ol>
+  <li>First, <code>package.json</code> and <code>npm ls ky</code> tell you which version is installed.</li>
+  <li>Second, the files inside <code>node_modules/ky/</code> match that version exactly. Ky ships its <code>readme.md</code> and its type definitions in <code>distribution/index.d.ts</code>.</li>
+  <li>Third, the release notes explain what changed between the version the agent remembers and the version you have.</li>
+  <li>Fourth, the official docs site describes the latest version. Some sites also publish an <code>llms.txt</code> file, a Markdown index of the docs written for language models (<a href="https://llmstxt.org/">llmstxt.org</a>). For example, the Claude Code docs publish one at <code>https://code.claude.com/docs/llms.txt</code>.</li>
+</ol>
+
+<p>Ask the agent to quote the lines it relies on, because a quote is something you can check in a few seconds, while a summary isn't.</p>
+
+<pre><code>We use ky, and the installed version is in package.json.
+Before you answer, read node_modules/ky/readme.md and
+node_modules/ky/distribution/index.d.ts.
+Quote the lines you rely on, with the file name for each quote.</code></pre>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>A grounded answer quotes the installed readme. For example, ky 2.2.0's readme lists the default retry settings, and the two lines below show that ky retries a failed request 2 times and that <code>post</code> isn't in the list of retried methods:</p>
+<pre><code>- `limit`: `2`
+- `methods`: `get` `put` `head` `delete` `options` `trace` `query`</code></pre>
+<p>Those two lines answer a design question for your project. A failed <code>POST</code> that creates an order won't be sent twice by ky's default settings, so the order won't be created twice.</p>
+</details>
+<p class="read-more">Read more: <a href="https://llmstxt.org/">llmstxt.org</a>, and <a href="https://martinfowler.com/articles/exploring-gen-ai/context-engineering-coding-agents.html">Birgitta Böckeler, Context Engineering for Coding Agents</a></p>
+
+<h2>Test your understanding in a spike, and write down what you learn</h2>
+
+<p>Reading the docs tells you what the library should do, and running it tells you what it does. A <span class="term" data-tip="Spike: a small throwaway program, kept outside the real project, that answers one question about a library or an approach.">spike</span> is a small throwaway program that answers one question, and you keep it in a separate folder so it never ends up in the project.</p>
+
+<p>Write down your prediction before you run the spike. Where your prediction and the output differ, your understanding of the library was wrong, and you have found the exact thing to learn.</p>
+
+<p>The spike below asks three questions about ky 2.2.0, and an agent wrote it after reading the installed readme:</p>
+<pre><code>import ky from 'ky';
+
+const api = ky.create({ baseUrl: 'https://httpbin.org/' });
+
+// 1. A JSON GET
+const data = await api.get('json').json();
+console.log('1. title:', data.slideshow.title);
+
+// 2. A 404: ky throws, fetch would not
+try {
+  await api.get('status/404');
+} catch (error) {
+  console.log('2.', error.name, error.response.status);
+}
+
+// 3. The v1 option name
+try {
+  await ky.get('json', { prefixUrl: 'https://httpbin.org/' });
+} catch (error) {
+  console.log('3.', error.message);
+}</code></pre>
+<p>Running <code>node spike.mjs</code> on 2026-10-14 with Node 26 printed the following. The third line is shortened:</p>
+<pre><code>1. title: Sample Slide Show
+2. HTTPError 404
+3. The `prefixUrl` option has been renamed `prefix` in v2 and enhanced to allow slashes in input. ...</code></pre>
+
+<p>The second result shows a difference from plain <code>fetch</code>, which doesn't throw on a 404. The same request with <code>fetch</code> printed <code>fetch ok: false 404</code>, so with <code>fetch</code> your code has to check <code>response.ok</code> itself.</p>
+
+<p>After the spike, write what you learned into the project repo, e.g., <code>docs/notes/ky.md</code>. Lesson 3 showed that the repo is where later sessions look, so a later agent reads your note with the version and the sources, and it doesn't fall back on its training data.</p>
+
+<p>The aim is to know enough to steer. You don't need to know all of ky, but you need to answer the questions that decide your design, e.g., whether it throws on errors, whether it retries, and which version you have.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>A note in the repo can be short. Here is an example of <code>docs/notes/ky.md</code>:</p>
+<pre><code># ky (installed: 2.2.0, checked 2026-10-14)
+
+- Throws HTTPError for any status outside 200 to 299 (readme, "Returns a Response").
+- Retries 2 times by default, and never retries POST (readme, "retry").
+- Base address option is baseUrl or prefix. prefixUrl was the v1 name and now throws.
+- Sources: node_modules/ky/readme.md, the v2.0.0 release notes.</code></pre>
+</details>
+<p class="read-more">Read more: <a href="https://github.com/sindresorhus/ky#baseurl">ky readme, the baseUrl section</a></p>
+
+<h2>Do it</h2>
+<ol class="steps">
+  <li>
+    <p>Create a spike folder outside your project, and install ky in it.</p>
+<pre><code>mkdir -p ~/code/agents-lab/module-0/ky-spike   # a throwaway folder for the spike
+cd ~/code/agents-lab/module-0/ky-spike         # move into it
+npm init -y                                    # create a package.json
+npm install ky                                 # install the latest ky</code></pre>
+    <p>You should now see <code>added 1 package</code> in the output of the last command.</p>
+  </li>
+  <li>
+    <p>Check which version you installed.</p>
+<pre><code>npm ls ky   # print the installed version</code></pre>
+    <p>You should now see <code>ky@2.2.0</code> or a later version.</p>
+  </li>
+  <li>
+    <p>Start your agent in the spike folder, and give it this prompt:</p>
+<pre><code>Read node_modules/ky/readme.md and node_modules/ky/distribution/index.d.ts.
+Then write spike.mjs that answers three questions about this ky version:
+1. How do I GET JSON from https://httpbin.org/json with a base URL option?
+2. What happens on a 404 from https://httpbin.org/status/404?
+3. What happens if I pass the option prefixUrl?
+Quote the readme lines you relied on. Don't run the script.</code></pre>
+    <p>You should now see a <code>spike.mjs</code> file and quotes from the readme in the agent's reply.</p>
+  </li>
+  <li>
+    <p>Before you run anything, write your three predictions in a file named <code>predictions.txt</code>, one line per question.</p>
+    <p>You should now have a file with three lines, written by you and not by the agent.</p>
+  </li>
+  <li>
+    <p>Run the spike.</p>
+<pre><code>node spike.mjs   # run the agent's spike</code></pre>
+    <p>You should now see three numbered lines similar to the captured output above. Compare each line with your prediction, and mark each one right or wrong.</p>
+  </li>
+  <li>
+    <p>Move to the <code>notes-app</code> repo from lesson 3, and ask the agent to record what you learned:</p>
+<pre><code>Write docs/notes/ky.md with what we learned about ky in
+~/code/agents-lab/module-0/ky-spike: the installed version, today's date,
+the answers to the three questions, and the source of each answer.</code></pre>
+    <p>You should now see <code>docs/notes/ky.md</code> in the <code>notes-app</code> repo, and it names the version you installed.</p>
+  </li>
+</ol>
+
+<h2>Check yourself</h2>
+
+<p>Each statement below comes from an agent's answer about ky, with ky 2.2.0 installed. Decide whether the answer is grounded in the installed version or is invented or outdated.</p>
+
+<div class="classify" data-cats='["Grounded in installed version","Invented or outdated"]' data-prompt="Can you trust this part of the agent's answer?">
+  <div class="item" data-answer="Invented or outdated" data-why="prefixUrl was the ky 1 name. Ky 2 renamed it to prefix, and passing prefixUrl throws an error."><pre><code>const api = ky.create({ prefixUrl: 'https://api.example.com' });</code></pre></div>
+  <div class="item" data-answer="Grounded in installed version" data-why="The agent quotes the installed readme and names the file, so you can check the quote yourself."><p>"From <code>node_modules/ky/readme.md</code>: ky retries with <code>limit: 2</code> by default, and <code>post</code> isn't in the retried methods."</p></div>
+  <div class="item" data-answer="Invented or outdated" data-why="No ky version has a fetchJson method. Searching the installed index.d.ts confirms that the method doesn't exist."><pre><code>const user = await ky.fetchJson('https://api.example.com/user');</code></pre></div>
+  <div class="item" data-answer="Grounded in installed version" data-why="The claim matches the spike's real output, HTTPError 404, and the readme says the body methods throw outside 200 to 299."><p>"Ky throws an <code>HTTPError</code> on a 404. The spike printed <code>HTTPError 404</code>."</p></div>
+  <div class="item" data-answer="Invented or outdated" data-why="The answer relies on the model's memory and gives no source, and the installed version is newer than the one it remembers."><p>"Ky works the same in every version, so there's no need to check the docs."</p></div>
+</div>
+
+<div class="quiz"
+  data-q="Which source most exactly matches the ky version your project runs?"
+  data-opts='["The readme in node_modules","A recent blog tutorial","The model training memory","A popular forum answer"]'
+  data-answer="0"
+  data-why="The readme inside node_modules was installed with the package, so it describes that exact version. A blog tutorial and a forum answer describe whatever version their author used. The model's memory stops at its training cutoff."></div>
+
+<div class="source">
+  <a href="https://github.com/sindresorhus/ky">The ky readme on GitHub</a>. Read the sections on <code>baseUrl</code>, <code>retry</code> and <code>HTTPError</code>, and compare them with the copy in your <code>node_modules</code>. Then read the <a href="https://github.com/sindresorhus/ky/releases/tag/v2.0.0">v2.0.0 release notes</a> to see everything that changed between ky 1 and ky 2.
+</div>
+
+<div class="feedback-ask">When you finish, tell your teacher (the agent) two things. First, could you follow this lesson alone, on a scale of 1 to 5? Second, where did you get stuck, if anywhere? Your answers go into <code>feedback/module-0.md</code> and are used to improve the lesson.</div>
+
+<div class="footer-nav">
+Reference: <a href="../reference/agent-session-checklist.html">Agent session checklist</a>, <a href="../reference/glossary.html">Glossary</a><br>
+Previous: <a href="0003-knowledge-in-the-repo.html">Lesson 3, Keeping project knowledge in the repo and in saved sessions</a><br>
+Next: <a href="0005-reading-one-request.html">Lesson 5, Reading one request across five systems</a><br>
+Course: <a href="index.html">Course index</a><br>
+If anything is unclear, ask your teacher (the agent). For example, you could ask "How do I check whether a library silently ignores an option it doesn't know?"
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script src="../assets/tooltip.js"></script>
+<script src="../assets/classify.js"></script>

@@ -1,0 +1,64 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent session checklist</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Agent session checklist</h1>
+<p class="subtitle">A one-page routine for any coding agent, from lessons 1 and 2. Print it and keep it next to your keyboard.</p>
+
+<h2>Before you start a session</h2>
+<ul class="check">
+  <li><label><input type="checkbox"> The session has one task. Anything unrelated waits for its own session.</label></li>
+  <li><label><input type="checkbox"> The working tree is committed, so <code>git status</code> shows nothing to commit.</label></li>
+  <li><label><input type="checkbox"> The build and test commands are written in <code>AGENTS.md</code>, so the agent can run them itself.</label></li>
+</ul>
+
+<h2>What to put in the prompt</h2>
+<ul class="check">
+  <li><label><input type="checkbox"> The goal, and the files where the change belongs.</label></li>
+  <li><label><input type="checkbox"> The design you chose, e.g., function names, inputs and outputs.</label></li>
+  <li><label><input type="checkbox"> The edge cases, with one test to add for each.</label></li>
+  <li><label><input type="checkbox"> The limits and the proof, i.e., what not to touch and what evidence to show at the end.</label></li>
+</ul>
+
+<h2>While the agent works</h2>
+<ul class="check">
+  <li><label><input type="checkbox"> Watch the tool calls and stop the agent if it works on files outside the task.</label></li>
+  <li><label><input type="checkbox"> If the session has tried several fixes without success, stop and start a new session with a short summary.</label></li>
+</ul>
+
+<h2>What counts as proof</h2>
+<table>
+  <tr><th>Proof you can check</th><th>Claim without proof</th></tr>
+  <tr><td>Full test output, e.g., <code>pass 6, fail 0</code></td><td>"All tests pass."</td></tr>
+  <tr><td>A command and its output that you can run again</td><td>"I verified it works."</td></tr>
+  <tr><td>A screenshot of the page after the change</td><td>"The build should succeed."</td></tr>
+</table>
+<ul class="check">
+  <li><label><input type="checkbox"> Run the test command yourself and compare the result with the agent's output.</label></li>
+  <li><label><input type="checkbox"> Run <code>git diff --stat</code> and confirm that only the expected files changed.</label></li>
+</ul>
+
+<h2>How to review the change</h2>
+<ul class="check">
+  <li><label><input type="checkbox"> Start a new session and give it this prompt: "Run git diff to see the code someone else wrote. Review it thoroughly and give me a report. Don't change any files."</label></li>
+  <li><label><input type="checkbox"> Decide for each finding whether it is correct for your design.</label></li>
+  <li><label><input type="checkbox"> Read the tests in the diff, because passing tests that check nothing are not proof.</label></li>
+</ul>
+
+<h2>How to end the session</h2>
+<ul class="check">
+  <li><label><input type="checkbox"> Give cleanup, e.g., removing debug output, to a separate new session.</label></li>
+  <li><label><input type="checkbox"> Run <code>git status</code> before you keep or discard anything.</label></li>
+  <li><label><input type="checkbox"> Keep the change with <code>git commit</code>, or discard it with <code>git restore .</code>, which can't be undone.</label></li>
+</ul>
+
+<h2>Sources</h2>
+<p>Thorsten Ball, <a href="https://ampcode.com/notes/how-i-use-amp">How I Use Amp</a> (May 2025) and <a href="https://ampcode.com/docs/using-amp/thorsten">How Thorsten uses Amp</a> (September 2026), and the <a href="https://ampcode.com/docs/threads">Amp threads documentation</a>.</p>
+
+<div class="footer-nav">
+Lessons: <a href="../lessons/0001-agent-model-tools-loop.html">Lesson 1</a>, <a href="../lessons/0002-directing-an-agent-session.html">Lesson 2</a><br>
+Course: <a href="../lessons/index.html">Course index</a>
+</div>

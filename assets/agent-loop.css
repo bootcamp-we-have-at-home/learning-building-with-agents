@@ -1,0 +1,26 @@
+/* Styles for assets/agent-loop.js. Uses the colour variables from course.css. */
+.agent-loop { border: 1px solid var(--rule); border-radius: 12px; padding: 1rem 1.2rem; margin: 1.6rem 0; background: var(--card); box-shadow: var(--shadow); }
+.agent-loop .loop-head { font-family: var(--sans); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0; }
+.agent-loop .loop-caption { font-family: var(--sans); font-size: 0.85rem; color: var(--muted); margin: 0.2rem 0 0.8rem; }
+.agent-loop .turn { border-left: 4px solid var(--rule); padding: 0.1rem 0 0.1rem 0.8rem; margin: 0.6rem 0; }
+.agent-loop .turn pre { margin: 0.2rem 0 0; font-size: 0.78rem; max-height: 16rem; overflow: auto; white-space: pre-wrap; }
+.agent-loop .turn .badge { font-family: var(--sans); font-size: 0.78rem; font-weight: 600; margin: 0; }
+.agent-loop .turn[data-kind="user"] { border-left-color: var(--muted); }
+.agent-loop .turn[data-kind="text"] { border-left-color: var(--accent); }
+.agent-loop .turn[data-kind="text"] .badge { color: var(--accent); }
+.agent-loop .turn[data-kind="call"] { border-left-color: var(--l-tcp, #2f6f8f); }
+.agent-loop .turn[data-kind="call"] .badge { color: var(--l-tcp, #2f6f8f); }
+.agent-loop .turn[data-kind="result"] { border-left-color: var(--l-tls, #2f7d55); }
+.agent-loop .turn[data-kind="result"] .badge { color: var(--l-tls, #2f7d55); }
+.agent-loop .loop-status { font-family: var(--sans); font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--rule-soft); padding-top: 0.7rem; margin: 0.8rem 0 0.4rem; }
+.agent-loop .loop-ask .q { font-weight: 600; margin: 0.4rem 0; }
+.agent-loop .loop-choices { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.agent-loop button { font: inherit; font-family: var(--sans); font-size: 0.85rem; color: inherit; background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 999px; padding: 0.25rem 0.8rem; cursor: pointer; }
+.agent-loop button:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.agent-loop button.right { border-color: var(--ok); background: var(--ok-soft); }
+.agent-loop button.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.agent-loop button:disabled { cursor: default; }
+.agent-loop .loop-next { margin-top: 0.3rem; color: var(--accent); border-radius: 8px; }
+.agent-loop .loop-feedback { font-family: var(--sans); font-size: 0.88rem; color: var(--muted); min-height: 1.2em; margin: 0.5rem 0; }
+@media print { .agent-loop .turn[hidden] { display: block; } .agent-loop .loop-ask { display: none; } }

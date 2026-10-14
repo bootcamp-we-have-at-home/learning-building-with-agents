@@ -1,0 +1,93 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building Software with Agents</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Building Software with Agents</h1>
+<p class="subtitle">A self-paced course on directing coding agents to build and ship full-stack web apps, at about one module per week</p>
+
+<p class="why">Coding agents can write most of the code in a project, so a developer is now hired for judgment, which means deciding what to build, setting the constraints, and checking the result. In this course you build the same projects as the GSG Code Academy track, but an agent writes the code and you design, constrain, review and fix it.</p>
+
+<h2>How each module is organised</h2>
+<p>Every module has the same four strands. The strands follow the GSG curriculum weeks, so each module ends with the project from the matching GSG week.</p>
+<table class="strands-table">
+  <tr><th>Strand</th><th>What you learn</th></tr>
+  <tr><td><span class="strand systems">Systems model</span></td><td>How the parts around your code work, e.g., the browser, the server, the database and the network between them. You learn enough to read the evidence an agent produces and to notice when it fixes the wrong part. You read the output of tools, and you don't memorise how to run them.</td></tr>
+  <tr><td><span class="strand buy">Build, then buy</span></td><td>You build a small version of a feature once so you understand it, and then you replace it with a library or a service. You write down why in a short decision record.</td></tr>
+  <tr><td><span class="strand craft">Agent craft</span></td><td>One way that agents fail, and the guardrail that prevents it. The guardrails live in the repo, e.g., <code>AGENTS.md</code>, tests and git, so they work with Claude Code, Codex, opencode, pi and Amp.</td></tr>
+  <tr><td><span class="strand project">Project</span></td><td>The GSG project for that week. You write the spec, and an agent writes the code. You then review the code, try to break it and fix what fails. You hand in your spec, your <code>AGENTS.md</code>, your decision records and your review notes to your mentor.</td></tr>
+</table>
+
+<h2>Modules</h2>
+<div class="modules">
+
+  <div class="module">
+    <h3>Module 0. How coding agents work and how to direct them</h3>
+    <p class="meta">Agent craft. No GSG week; complete it before everything else.</p>
+    <ol>
+      <li><a href="0001-agent-model-tools-loop.html">An agent is a model, a set of tools and a loop</a></li>
+      <li><a href="0002-directing-an-agent-session.html">Directing one agent session from plan to proof</a></li>
+      <li><a href="0003-knowledge-in-the-repo.html">Keeping project knowledge in the repo and in saved sessions</a></li>
+      <li><a href="0004-learning-a-library-with-an-agent.html">Learning a new library with an agent, from its docs and source</a></li>
+    </ol>
+  </div>
+
+  <div class="module">
+    <h3>Module 1. How browsers, servers and APIs talk over HTTP</h3>
+    <p class="meta">Follows GSG weeks 1 and 3. Project: a single-page app that uses two public APIs.</p>
+    <ol start="5">
+      <li><a href="0005-reading-one-request.html">Reading one request across five systems</a></li>
+      <li><a href="0006-http-methods-status-headers.html">HTTP methods, status codes and headers</a></li>
+      <li><a href="0007-same-origin-and-cors.html">Why the browser blocks some requests, with same-origin and CORS</a></li>
+      <li><a href="0008-build-buy-or-self-host.html">Deciding whether to build, buy or self-host, starting with fetch</a></li>
+      <li><a href="0009-project-two-api-app.html">Project: a single-page app from two public APIs, built by an agent</a></li>
+    </ol>
+  </div>
+
+  <div class="module soon">
+    <h3>Module 2. Servers, configuration and the Twelve-Factor App</h3>
+    <p class="meta">Follows GSG weeks 4 and 5. Project: a news app that calls an API from the server.</p>
+    <p>A server is a process that listens on a port, and you'll build a small one with Node's <code>http</code> module before you move to Express or Hono. The Twelve-Factor App is the main reference for this module, and it explains how to keep configuration in the environment so you can run several copies of an app on one laptop. On the agent side, you learn to write specs with acceptance criteria and to keep diffs small.</p>
+  </div>
+
+  <div class="module soon">
+    <h3>Module 3. Databases as separate services, and tests as the contract</h3>
+    <p class="meta">Follows GSG week 6. Project: an Express app with PostgreSQL.</p>
+    <p>You start with raw SQL and then move to a query builder such as Drizzle, and you learn about schemas, migrations, test databases and SQL injection. On the agent side, you learn how agents weaken or fake tests, and how linters, CI and git hooks stop destructive commands and unchecked changes.</p>
+  </div>
+
+  <div class="module soon">
+    <h3>Module 4. Identity, sessions and security review of agent code</h3>
+    <p class="meta">Follows GSG week 7. Project: a site with authentication.</p>
+    <p>You write a 60-line cookie session by hand, and then you replace it with better-auth and compare the two. You also compare better-auth with hosted and self-hosted options. On the agent side, you learn about prompt injection, the "lethal trifecta" described by Simon Willison, and how secrets leak into an agent's context.</p>
+  </div>
+
+  <div class="module soon">
+    <h3>Module 5. Front-end architecture and learning new tools quickly</h3>
+    <p class="meta">Follows GSG weeks 9 and 11. Project: a React front end for your own API.</p>
+    <p>You learn what the browser downloads and where the boundary between client and server sits, and you compare hand-written CSS with Tailwind and a component library. On the agent side, you learn to use TypeScript as a constraint and to split work across subagents and git worktrees.</p>
+  </div>
+
+  <div class="module soon">
+    <h3>Module 6. Capstone: a full-stack e-commerce app</h3>
+    <p class="meta">Follows GSG week 10. Project: the e-commerce app, deployed.</p>
+    <p>You run the whole set of guardrails from earlier modules on one large project, with several agents working in parallel on your laptop. You finish with a list of every build, buy and self-host decision you made, and with a written account of the project for your portfolio and for interviews.</p>
+  </div>
+</div>
+
+<h2>Reference sheets</h2>
+<p>These sheets are for looking things up, and you don't need to read them in order.</p>
+<ul>
+  <li><a href="../reference/glossary.html">Glossary</a>, which holds the terms every lesson uses</li>
+  <li><a href="../reference/agent-session-checklist.html">Agent session checklist</a>, which covers how to start, direct, check and end a session</li>
+  <li><a href="../reference/agent-failure-catalog.html">Agent failure catalog</a>, which grows in every module and lists each failure with its symptom, cause and guardrail</li>
+  <li><a href="../reference/reading-http.html">Reading HTTP evidence</a>, which explains <code>curl -v</code> output, status codes and which part failed</li>
+  <li><a href="../reference/decision-record-template.html">Decision record template</a>, for build, buy or self-host choices</li>
+</ul>
+
+<div class="footer-nav">
+<a href="config.html">Display settings</a> for page width, theme, text size and font<br>
+Sources for every lesson are listed in <code>RESOURCES.md</code> at the root of this repo.
+</div>

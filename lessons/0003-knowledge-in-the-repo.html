@@ -1,0 +1,221 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 3: Keeping project knowledge in the repo and in saved sessions</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Lesson 3: Keeping project knowledge in the repo and in saved sessions</h1>
+<p class="subtitle">About 40 minutes, Module 0 <span class="strand craft">Agent craft</span></p>
+
+<p class="why">Every agent session starts with an empty context, so the only things an agent knows about your project are the things it can read in the repo. A team hiring you will check whether a new teammate, or a new agent session, can pick up your project from the repo alone.</p>
+
+<h2>An agent session starts with no knowledge of your project</h2>
+
+<p>In lesson 1 you saw that the model only sees what is in its context, i.e., the messages, tool results and files that the loop has added so far. When a session ends, that context is gone, and the next session starts again from nothing.</p>
+
+<p>Some agent tools offer a memory feature, which writes notes that the agent loads in later sessions. For example, Claude Code's docs describe "auto memory" as "notes Claude writes itself based on your corrections and preferences" (<a href="https://code.claude.com/docs/en/memory">Claude Code docs, memory</a>). The course doesn't use memory features, because the notes live outside the repo, so teammates and other tools can't see them, and nobody reviews them in a pull request.</p>
+
+<p>The course uses the repo itself as the memory, so every fact about the project has one home that a person and any agent can read.</p>
+
+<p>Each kind of knowledge has its own place in the repo. The table below shows where each kind belongs:</p>
+<table>
+  <tr><th>Place</th><th>What it records</th></tr>
+  <tr><td>The code and its tests</td><td>What the project does, and what must stay true</td></tr>
+  <tr><td>Commit messages</td><td>Why each change was made</td></tr>
+  <tr><td><code>AGENTS.md</code></td><td>How to work in the repo, e.g., the build and test commands, the conventions and the limits</td></tr>
+  <tr><td>Saved session transcripts</td><td>How a decision was reached, including what the human asked for and what was rejected</td></tr>
+</table>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>A commit message only helps a later session if it says why. The first message below repeats what the diff already shows, and the second one adds a reason that no other place records:</p>
+<pre><code>Update auth.js                                   # says nothing the diff doesn't show
+
+Store sessions in Postgres instead of memory     # what changed
+                                                 # (blank line)
+Sessions were lost on every restart, so users    # why it changed
+were logged out after each deploy.</code></pre>
+<p>Git history is also useful context for an agent. Thorsten Ball writes that "raw commits contain so much information to inject relevant context into a prompt" (<a href="https://ampcode.com/notes/how-i-use-amp">How I Use Amp</a>). For example, you can prompt "Look at commit abc123, which added the products route, and add a categories route in the same way."</p>
+</details>
+<p class="read-more">Read more: <a href="https://cbea.ms/git-commit/">Chris Beams, How to write a Git commit message</a>, and <a href="https://ampcode.com/notes/how-i-use-amp">Thorsten Ball, How I Use Amp</a></p>
+
+<h2>AGENTS.md tells every agent how to work in the repo</h2>
+
+<p>You already put a <code>README.md</code> in a project for human readers. An <code>AGENTS.md</code> file is the matching file for agents, and the format's site describes it as "a simple, open format for guiding coding agents" (<a href="https://agents.md/">agents.md</a>).</p>
+
+<p>The file is plain Markdown with no required fields or headings. The site suggests a few common sections, e.g., the build and test commands, the code style, testing instructions and security considerations.</p>
+
+<p>Keep the file short, and only write facts that an agent can't work out from the code. The build and test commands are the most useful part, because an agent that knows the test command can run the tests and fix its own errors. Thorsten Ball describes this: "Since what 'the build' is, is documented in the AGENTS.md, the agent will just run the command and then fix the errors" (<a href="https://ampcode.com/notes/how-i-use-amp">How I Use Amp</a>).</p>
+
+<pre><code># Notes app
+
+A command line app that saves notes as Markdown files.
+
+## Commands
+- Run the tests: `node --test`
+- Run the app: `node notes.js add "My title"`
+
+## Conventions
+- Plain JavaScript (ES modules), no TypeScript, no build step.
+- Every new function gets a test in `test/`.
+
+## Limits
+- Don't add npm dependencies without asking first.
+- Run `node --test` before you say a task is finished, and show the output.</code></pre>
+
+<p>Each tool finds <code>AGENTS.md</code> in a slightly different way. The table below was checked against each tool's docs on 2026-10-14.</p>
+<table>
+  <tr><th>Tool</th><th>How it reads AGENTS.md</th><th>Source</th></tr>
+  <tr><td>Claude Code</td><td>Reads <code>AGENTS.md</code> in the working directory and the directories above it, from v2.1.277. If a <code>CLAUDE.md</code>, <code>.claude/CLAUDE.md</code> or <code>CLAUDE.local.md</code> exists in any of those directories, Claude Code reads only the <code>CLAUDE.md</code> files and ignores <code>AGENTS.md</code>.</td><td><a href="https://code.claude.com/docs/en/memory#agents-md">docs</a></td></tr>
+  <tr><td>Codex</td><td>Reads <code>AGENTS.md</code> from the project root down to the working directory, at most one file per directory, and a file closer to the working directory overrides earlier ones. An <code>AGENTS.override.md</code> takes the place of <code>AGENTS.md</code> in its directory. The combined files are cut off at 32 KiB by default.</td><td><a href="https://learn.chatgpt.com/docs/agent-configuration/agents-md">docs</a></td></tr>
+  <tr><td>opencode</td><td>Searches upward from the working directory for <code>AGENTS.md</code> or <code>CLAUDE.md</code>, and the first match wins. When both exist in the same place, only <code>AGENTS.md</code> is loaded.</td><td><a href="https://opencode.ai/docs/rules/">docs</a></td></tr>
+  <tr><td>pi</td><td>Loads context files (<code>AGENTS.md</code> or <code>CLAUDE.md</code>) from its own agent directory, the working directory and its parent directories. Not verified: which file wins when both exist in one directory.</td><td><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/configuration.md">docs</a></td></tr>
+  <tr><td>Amp</td><td>Always includes <code>AGENTS.md</code> in the working directory and parent directories up to your home folder. It includes an <code>AGENTS.md</code> in a subfolder when the agent reads a file in that subfolder. If a directory has no <code>AGENTS.md</code>, Amp uses <code>AGENT.md</code> or <code>CLAUDE.md</code> instead.</td><td><a href="https://ampcode.com/docs/customize/agents-md">docs</a></td></tr>
+</table>
+
+<p>The Claude Code rule can catch you out without any warning. For example, a <code>CLAUDE.md</code> that an old tutorial left in <code>~/code</code> makes Claude Code skip your project's <code>AGENTS.md</code>, while Codex, opencode and Amp still read it. When Claude Code does load the file, it prints a line such as <code>AGENTS.md loaded: /home/you/repo/AGENTS.md</code> at the start of the session, so look for that line.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>A repo with several packages can have one <code>AGENTS.md</code> per package. The agents.md site says "the closest AGENTS.md to the edited file wins", so the package file can override the root file for that package:</p>
+<pre><code>AGENTS.md              # shared rules, e.g., the commit message style
+server/AGENTS.md       # server rules, e.g., "run npm test in server/"
+client/AGENTS.md       # client rules, e.g., "run npm run lint in client/"</code></pre>
+<p>Facts that the code already shows don't belong in <code>AGENTS.md</code>. For example, "the project uses Express" is visible in <code>package.json</code>, so writing it again only adds tokens that the agent reads in every session.</p>
+</details>
+<p class="read-more">Read more: <a href="https://agents.md/">agents.md</a>, and <a href="https://martinfowler.com/articles/exploring-gen-ai/context-engineering-coding-agents.html">Birgitta Böckeler, Context Engineering for Coding Agents</a></p>
+
+<h2>Saved sessions record how a decision was made</h2>
+
+<p>A commit message says why a change was made, but it leaves out the discussion that led there, e.g., the options you rejected and the questions you asked. The transcript of the session holds that discussion.</p>
+
+<p>The Amp team builds on that idea. Quinn Slack says that "all of our intent, all of our history is in Amp, in threads, in something that is legible to the agent" (<a href="https://ampcode.com/podcast/season-02/episode-04">Raising an Agent, season 2, episode 4</a>). Amp's agent can read an old thread when it needs a detail, and the team writes that it "goes back and looks instead of trusting the compaction" (<a href="https://ampcode.com/news/read-bigger-threads">Read Bigger Threads</a>).</p>
+
+<p>Compaction is when a tool replaces older messages with a short summary to free up context. Amp removed compaction in 2025 and then brought it back in May 2026 (<a href="https://ampcode.com/news/neo">Amp, Rebuilt</a>), but in both versions the full thread stays available to re-read, and a summary can lose details that the full transcript keeps.</p>
+
+<p>You can follow the same practice in any tool, in four steps:</p>
+<ol>
+  <li>First, at the end of a session, save the transcript into the repo, e.g., <code>docs/sessions/2026-10-14-slugify.md</code>.</li>
+  <li>Second, add a <code>Session:</code> line at the end of the commit message that points to the saved file. Amp adds a similar <code>Amp-Thread-ID</code> line to its commits (<a href="https://ampcode.com/docs/threads">Amp threads docs</a>).</li>
+  <li>Third, before you stop a long piece of work, ask the agent for a handoff note with the goal, the decisions made, the relevant files and the open questions, and edit it yourself.</li>
+  <li>Fourth, in a later session, point the agent at the source, e.g., "Read docs/sessions/2026-10-14-slugify.md and list what we decided about accented letters."</li>
+</ol>
+
+<p>Read a transcript before you commit it, because it can contain secrets. The pi docs warn that a session "can contain prompts, tool output, file contents, and credentials exposed during the conversation" (<a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/usage.md">pi usage docs</a>).</p>
+
+<p>The commands for saving a transcript differ by tool. The table below was checked on 2026-10-14.</p>
+<table>
+  <tr><th>Tool</th><th>How to save the current session</th><th>Source</th></tr>
+  <tr><td>Claude Code</td><td><code>/export docs/sessions/name.md</code> writes the conversation as plain text to that file.</td><td><a href="https://code.claude.com/docs/en/commands">docs</a></td></tr>
+  <tr><td>Codex</td><td>Not verified. The CLI (0.147.0) can resume and fork saved sessions with <code>codex resume</code> and <code>codex fork</code>, but its help lists no export command.</td><td><code>codex --help</code></td></tr>
+  <tr><td>opencode</td><td><code>opencode export</code> writes a session as JSON, and <code>--sanitize</code> removes sensitive data.</td><td><a href="https://opencode.ai/docs/cli/">docs</a></td></tr>
+  <tr><td>pi</td><td><code>/export</code> saves the session as HTML or JSONL.</td><td><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/sessions.md">docs</a></td></tr>
+  <tr><td>Amp</td><td><code>amp threads markdown T-...</code> prints a thread as Markdown, and <code>amp threads export T-...</code> exports it.</td><td><a href="https://ampcode.com/docs/threads">docs</a></td></tr>
+</table>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>A handoff note is short, and you edit it before you trust it. Here is an example:</p>
+<pre><code># Handoff: slugify for note file names
+
+Goal: note titles become safe file names.
+Decided: lowercase, spaces become hyphens, other symbols are removed.
+Files: slugify.js, test/slugify.test.js
+Open question: should accented letters (é) become plain letters (e) or be removed?</code></pre>
+<p>A new session can start from the note with the prompt "Read docs/handoff.md, then answer the open question by checking what the tests expect." The new session has a small, focused context, and it doesn't carry the failed attempts from the old session.</p>
+</details>
+<p class="read-more">Read more: <a href="https://ampcode.com/news/handoff">Amp, Handoff</a>, and <a href="https://git-scm.com/docs/git-interpret-trailers">git docs on commit trailers</a></p>
+
+<h2>Do it</h2>
+<ol class="steps">
+  <li>
+    <p>Create a practice repo for Module 0.</p>
+<pre><code>mkdir -p ~/code/agents-lab/module-0/notes-app   # create the folder and its parents
+cd ~/code/agents-lab/module-0/notes-app         # move into it
+git init                                        # start a git repo here</code></pre>
+    <p>You should now see <code>Initialized empty Git repository in</code> and the path of your new folder.</p>
+  </li>
+  <li>
+    <p>Create <code>AGENTS.md</code> in the repo, with the example content from the AGENTS.md section above, using your editor.</p>
+<pre><code>cat AGENTS.md   # print the file to check it</code></pre>
+    <p>You should now see the file's headings, Commands, Conventions and Limits.</p>
+  </li>
+  <li>
+    <p>Check that no <code>CLAUDE.md</code> file in this folder or above it would hide your <code>AGENTS.md</code> from Claude Code. The loop below checks each parent folder in turn.</p>
+<pre><code>d=$PWD; while [ "$d" != / ]; do ls "$d"/CLAUDE.md "$d"/CLAUDE.local.md "$d"/.claude/CLAUDE.md 2&gt;/dev/null; d=$(dirname "$d"); done   # list any CLAUDE files up the tree</code></pre>
+    <p>You should now see no output, which means nothing hides <code>AGENTS.md</code>. If a path appears, Claude Code reads that file instead, so ask your mentor before you move or delete it.</p>
+  </li>
+  <li>
+    <p>Start your agent in the repo, and give it this prompt:</p>
+<pre><code>Without opening any files, tell me the test command for this project
+and the name of the file you learned it from.</code></pre>
+    <p>You should now see the agent answer <code>node --test</code> and name <code>AGENTS.md</code>. In Claude Code, you should also see the <code>AGENTS.md loaded</code> line at the start of the session.</p>
+  </li>
+  <li>
+    <p>Give the agent a small task that follows the rules in <code>AGENTS.md</code>:</p>
+<pre><code>Add slugify.js, which turns a note title into a safe file name:
+lowercase, spaces become hyphens, other symbols are removed.
+Add a test in test/slugify.test.js. Run the tests and show me the output.</code></pre>
+    <p>You should now see the test output with <code>pass</code> and <code>fail 0</code> in the agent's reply. Run <code>node --test</code> yourself to confirm.</p>
+  </li>
+  <li>
+    <p>Save the session transcript into the repo with your tool's command from the table above, as <code>docs/sessions/</code> plus today's date and <code>-slugify.md</code>. Then read the file and remove anything secret.</p>
+<pre><code>ls docs/sessions/   # check that the transcript file exists</code></pre>
+    <p>You should now see one file with today's date in its name.</p>
+  </li>
+  <li>
+    <p>Commit the work with a message that says why, and add a <code>Session:</code> line. Each <code>-m</code> becomes one paragraph of the message, and you should change the file name to match your transcript.</p>
+<pre><code>git add .
+git commit -m "Add slugify for note file names" -m "Note titles can contain spaces and symbols that break file paths, so the app turns each title into lowercase words joined by hyphens." -m "Session: docs/sessions/2026-10-14-slugify.md"
+git log -1 --format='%(trailers)'   # print only the trailer lines of the last commit</code></pre>
+    <p>You should now see <code>Session: docs/sessions/2026-10-14-slugify.md</code>, with your own file name.</p>
+  </li>
+  <li>
+    <p>Exit the agent, start a new session in the same folder, and give it this prompt:</p>
+<pre><code>Using only the repo (code, git log and docs/sessions), explain why
+slugify.js exists and what rules it follows. Quote your sources.</code></pre>
+    <p>You should now see the agent quote the commit message and the saved transcript, even though the new session started with an empty context.</p>
+  </li>
+</ol>
+
+<h2>Check yourself</h2>
+
+<p>Decide where each piece of knowledge belongs. Answer from memory before you scroll up.</p>
+
+<div class="classify" data-cats='["AGENTS.md","Commit message","Handoff note","Code comment","Nowhere"]' data-prompt="Where does this piece of knowledge belong?">
+  <div class="item" data-answer="AGENTS.md" data-why="An agent needs the test command in every session, and the code doesn't state it, so it belongs in AGENTS.md."><p>"Run the tests with <code>npm test</code>, and run them before you say a task is finished."</p></div>
+  <div class="item" data-answer="Commit message" data-why="The sentence explains why one change was made, so it belongs with that change in its commit message."><p>"We switched from bcrypt to argon2 because the server image has no compiler for native modules."</p></div>
+  <div class="item" data-answer="Handoff note" data-why="The text records the state of unfinished work and an open question, which the next session needs to continue."><p>"Goal: the login form. Done: validation. Open: should the error say whether the email exists?"</p></div>
+  <div class="item" data-answer="Code comment" data-why="The reason applies to one line of code, so a comment next to that line is where a reader looks for it."><p>"The regex removes the byte order mark, because the bank's CSV export adds one."</p></div>
+  <div class="item" data-answer="Nowhere" data-why="The story of the agent's confusion doesn't help any later reader, and the saved transcript already contains it."><p>"The agent was confused about the folder layout for a while, and then it worked it out."</p></div>
+  <div class="item" data-answer="AGENTS.md" data-why="The rule limits what every agent may do in the repo, and the code can't express it."><p>"Never edit a migration file that has already run. Add a new migration instead."</p></div>
+  <div class="item" data-answer="Nowhere" data-why="A secret never goes into the repo, and Module 2 covers how to keep secrets in the environment instead."><p>"The database password is <code>hunter2</code>."</p></div>
+</div>
+
+<div class="quiz"
+  data-q="Your repo has an AGENTS.md, and an old CLAUDE.md sits in ~/code, the folder above the repo. You start Claude Code (v2.1.277 or later) in the repo. Which instruction file does it read?"
+  data-opts='["Only CLAUDE.md is read","Only AGENTS.md is read","Both files are read","Neither file is read"]'
+  data-answer="0"
+  data-why="Claude Code reads AGENTS.md only when no CLAUDE.md exists in the working directory or any directory above it. The CLAUDE.md in ~/code counts, so Claude Code reads only CLAUDE.md. It doesn't read both, and it doesn't skip both."></div>
+
+<div class="quiz"
+  data-q="Same folders as the last question, but you start opencode in the repo. Which instruction file does it read?"
+  data-opts='["Only AGENTS.md is read","Only CLAUDE.md is read","Both files are read","Neither file is read"]'
+  data-answer="0"
+  data-why="opencode searches upward from the working directory, and the first match wins. It finds the repo AGENTS.md first, so it reads AGENTS.md and ignores the CLAUDE.md further up. It doesn't read both, and it doesn't skip both."></div>
+
+<div class="source">
+  <a href="https://agents.md/">agents.md</a>. Read the whole page, which takes about five minutes, and pay attention to the example file and the FAQ about which file wins. Then read the AGENTS.md section of the <a href="https://code.claude.com/docs/en/memory#agents-md">Claude Code memory docs</a> for the shadowing rule.
+</div>
+
+<div class="feedback-ask">When you finish, tell your teacher (the agent) two things. First, could you follow this lesson alone, on a scale of 1 to 5? Second, where did you get stuck, if anywhere? Your answers go into <code>feedback/module-0.md</code> and are used to improve the lesson.</div>
+
+<div class="footer-nav">
+Reference: <a href="../reference/agent-session-checklist.html">Agent session checklist</a>, <a href="../reference/glossary.html">Glossary</a><br>
+Previous: <a href="0002-directing-an-agent-session.html">Lesson 2, Directing one agent session from plan to proof</a><br>
+Next: <a href="0004-learning-a-library-with-an-agent.html">Lesson 4, Learning a new library with an agent</a><br>
+Course: <a href="index.html">Course index</a><br>
+If anything is unclear, ask your teacher (the agent). For example, you could ask "What should go in a handoff note when the work is half done and the tests are failing?"
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script src="../assets/tooltip.js"></script>
+<script src="../assets/classify.js"></script>

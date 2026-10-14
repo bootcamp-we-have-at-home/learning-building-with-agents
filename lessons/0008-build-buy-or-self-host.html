@@ -1,0 +1,183 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 8: Deciding whether to build, buy or self-host, starting with fetch</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Lesson 8: Deciding whether to build, buy or self-host, starting with fetch</h1>
+<p class="subtitle">About 40 minutes, Module 1 <span class="strand buy">Build, then buy</span><span class="strand craft">Agent craft</span></p>
+
+<p class="why">An agent will add a library or a service whenever you ask for a feature, so you need to decide on purpose which code your project owns and which code it borrows. Employers ask junior developers to explain those choices in reviews and interviews, and a written decision record gives you that explanation.</p>
+
+<h2>Libraries and services change what you need to build yourself</h2>
+
+<p>In lesson 5 you read a request made with curl, and in your own code you have made the same kind of request with <code>fetch()</code>. Whenever your app needs a feature such as an HTTP client, a login system or a styling system, you have the same set of choices.</p>
+
+<p>The choices differ in who writes the code, who runs it, and where the data lives:</p>
+<ol>
+  <li><strong>Build</strong> means you write the code, and you test and maintain it yourself.</li>
+  <li><strong>Library</strong> means you install someone else's code into your app from npm, and it runs inside your app.</li>
+  <li><strong>Self-hosted service</strong> means you install and run a separate program on your own server, and your app talks to it over HTTP.</li>
+  <li><strong>Hosted service</strong> means a company runs the program on its servers, and your app sends requests to it. You pay with money, or with a free tier that has limits.</li>
+</ol>
+
+<p>Login is the clearest example, and Module 4 covers it in depth. Each option below was checked on 2026-10-14.</p>
+<table>
+  <tr><th>Option</th><th>Login example</th><th>Who runs it</th><th>Where user accounts live</th></tr>
+  <tr><td>Build</td><td>A cookie session you write by hand</td><td>You</td><td>Your database</td></tr>
+  <tr><td>Library</td><td><a href="https://www.better-auth.com/">better-auth</a>, MIT licence</td><td>You, inside your app</td><td>Your database, because the <a href="https://www.better-auth.com/docs/installation">installation docs</a> say "Better Auth requires a database to store user data"</td></tr>
+  <tr><td>Self-hosted service</td><td><a href="https://www.keycloak.org/">Keycloak</a>, Apache 2.0 licence, a CNCF <a href="https://www.cncf.io/projects/keycloak/">incubating</a> project</td><td>You, as a separate server</td><td>Keycloak's database on your server</td></tr>
+  <tr><td>Hosted service</td><td><a href="https://clerk.com/">Clerk</a> or <a href="https://auth0.com/">Auth0</a> (part of Okta)</td><td>The company</td><td>The company's servers</td></tr>
+</table>
+
+<p>You can only judge a library if you know what it does for you, so the rule in this course is to build a small version once and then decide whether to buy.</p>
+
+<p>Building the small version shows you which parts are easy and which parts are hard. For example, a hand-written login teaches you that storing a password safely and expiring a session are the hard parts, so you know to check that better-auth handles them before you trust it.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>Styling has the same choices. You can write your own CSS and theme variables, or you can use a library such as <a href="https://tailwindcss.com/">Tailwind CSS</a> or Meta's <a href="https://stylexjs.com/">StyleX</a>. The npm download counts for the week of 2026-10-06 to 2026-10-12 were 137,279,787 for <code>tailwindcss</code> and 2,126,860 for <code>@stylexjs/stylex</code>. Both are MIT licensed and both had releases in 2026.</p>
+<p>For a junior job search, the download gap is the deciding signal, because job adverts and existing codebases use Tailwind far more often. StyleX is worth reading about as a comparison, since it compiles styles at build time, but you would learn Tailwind first.</p>
+<p>A second example is a weather widget that shows today's temperature. A hosted weather API is the only sensible choice, because you can't build or run your own weather stations, so the decision is only about which provider to use.</p>
+</details>
+<p class="read-more">Read more: <a href="https://www.better-auth.com/">better-auth</a>, <a href="https://www.keycloak.org/">Keycloak</a>, and <a href="https://stylexjs.com/">StyleX</a> as an optional comparison with Tailwind</p>
+
+<h2>Building the small version of fetch once</h2>
+
+<p>The built-in <code>fetch()</code> function has a behaviour that surprises most developers. MDN's guide <a href="https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch">Using the Fetch API</a> says that <code>fetch()</code> rejects "on some errors, but not if the server responds with an error status like 404".</p>
+
+<p>In other words, a <code>404</code> or a <code>500</code> from lesson 6 doesn't throw, so code that forgets to check <code>response.ok</code> carries on as if the request worked. By default, <code>fetch()</code> also waits as long as the network allows, with no timeout.</p>
+
+<p>A small wrapper fixes both problems. The function below is about the size of the toy you'll ask an agent to build:</p>
+<pre><code>async function getJson(url, { timeoutMs = 5000 } = {}) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) }); // give up after timeoutMs
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);            // turn 4xx and 5xx into errors
+  return res.json();                                                         // parse the body as JSON
+}</code></pre>
+
+<p>The output below is real, and it was captured on 2026-10-14 with Node v26.7.0. It compares plain <code>fetch()</code>, the wrapper, and the <a href="https://github.com/sindresorhus/ky">ky</a> library that you studied in lesson 4:</p>
+<pre><code>plain fetch: 404 ok = false
+wrapper: HTTP 404 for https://httpbin.org/status/404
+wrapper timeout: TimeoutError
+ky: HTTPError Request failed with status code 404: GET https://httpbin.org/status/404
+ky timeout: TimeoutError</code></pre>
+
+<p>Plain <code>fetch()</code> returned the 404 without an error, while the wrapper and ky both threw. Ky does more than the toy, and its README lists retries, hooks, a base URL option and upload progress. By default, ky retries <code>GET</code> requests twice on statuses such as 429 and 503, and it uses a 10-second timeout.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>Ky's default retry list doesn't include <code>404</code>. A 404 means the path doesn't exist, so a retry would get the same answer, which is the same reasoning as in lesson 5.</p>
+<p>Ky also doesn't retry <code>POST</code> requests by default. A <code>POST</code> isn't idempotent, as lesson 6 explained, so sending it twice could create two orders. If an agent turns on retries for <code>POST</code>, ask it how the server prevents duplicates.</p>
+<p>The wrapper and ky each have a cost. The wrapper is about five lines that you test and maintain yourself. Ky is about 600 KB unpacked on npm and has no dependencies, but you depend on its maintainers for fixes and for changes between major versions.</p>
+</details>
+<p class="read-more">Read more: <a href="https://github.com/sindresorhus/ky#readme">ky README, "Benefits over plain fetch"</a>, and <a href="https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal/timeout_static">MDN, AbortSignal.timeout()</a></p>
+
+<h2>Checking the signals before you add a dependency</h2>
+
+<p>An agent will run <code>npm install</code> for almost any problem, including problems that need four lines of code. Before you accept a new dependency, check the signals below. Each one comes from a public source, and the agent can collect them for you.</p>
+
+<table>
+  <tr><th>Signal</th><th>Question it answers</th><th>Where to look</th></tr>
+  <tr><td>What you'd maintain</td><td>How much code would you own if you built it?</td><td>Your toy version</td></tr>
+  <tr><td>Weekly downloads</td><td>Do many projects use it?</td><td><code>api.npmjs.org/downloads</code></td></tr>
+  <tr><td>Last release and last commit</td><td>Is someone still fixing it?</td><td><code>npm view</code>, GitHub</td></tr>
+  <tr><td>Open issues and pull requests</td><td>Is there a backlog of unfixed problems?</td><td>GitHub</td></tr>
+  <tr><td>Size and dependencies</td><td>How much code does it add, and what else comes with it?</td><td><code>npm view</code></td></tr>
+  <tr><td>Docs and licence</td><td>Can you learn it, and are you allowed to use it?</td><td>README, <code>LICENSE</code></td></tr>
+  <tr><td>Lock-in, security and data</td><td>How hard is it to replace, who fixes security bugs, and who holds the data?</td><td>Docs, pricing page</td></tr>
+</table>
+
+<p>The numbers below were captured on 2026-10-14 from the npm registry, the npm downloads API and the GitHub API, for the week of 2026-10-06 to 2026-10-12:</p>
+<table>
+  <tr><th>Package</th><th>Weekly downloads</th><th>Latest release</th><th>Open issues and PRs</th><th>Licence</th><th>Unpacked size</th><th>Dependencies</th></tr>
+  <tr><td>ky</td><td>7,153,436</td><td>2.2.0, 2026-10-09</td><td>0</td><td>MIT</td><td>603 KB</td><td>0</td></tr>
+  <tr><td>axios</td><td>119,117,073</td><td>1.20.0, 2026-08-26</td><td>104</td><td>MIT</td><td>1,983 KB</td><td>4</td></tr>
+</table>
+
+<p>A single number can mislead you. For example, on 2026-10-14 ky had 0 open issues and 453 closed ones, which shows that its maintainers resolve or close every report, and it doesn't show that ky has no bugs. Download counts also include automated builds, so they measure how much code depends on a package and not how many people like it.</p>
+
+<p>You write the result in a decision record, which is a short Markdown file in the repo that says what you chose and why. The <a href="../reference/decision-record-template.html">decision record template</a> follows Michael Nygard's 2011 format, and lesson 3 explained why the reason has to live in the repo where the next agent session can read it.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>A guardrail in <code>AGENTS.md</code> stops the agent from adding dependencies without asking. For example:</p>
+<pre><code>## Dependencies
+- Don't add a new npm dependency without asking me first.
+- When you propose one, show its weekly downloads, latest release date,
+  licence and unpacked size, and say what we'd write instead.</code></pre>
+<p>An agent can also name a package that doesn't exist, or a package with a similar name to the one you meant. Before you approve an install, open the package's npm page and check that the repository link points to the project you expect.</p>
+</details>
+<p class="read-more">Read more: <a href="https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions">Michael Nygard, Documenting Architecture Decisions</a>, and <a href="https://adr.github.io/">adr.github.io</a> for other decision record formats</p>
+
+<h2>Do it</h2>
+<ol class="steps">
+  <li>
+    <p>Create a folder for the comparison inside the module folder from lesson 5, and set up an npm project in it.</p>
+<pre><code>mkdir -p ~/code/agents-lab/module-1/http-client   # new folder for this lesson
+cd ~/code/agents-lab/module-1/http-client         # move into it
+npm init -y                                        # create package.json with defaults
+git init                                           # start a repo so you can review diffs</code></pre>
+    <p>You should now see a <code>package.json</code> file when you run <code>ls</code>.</p>
+  </li>
+  <li>
+    <p>Open your coding agent in the folder and ask it to build the toy version. The prompt names the behaviour and the proof, as lesson 2 taught.</p>
+<pre><code>Create compare.mjs with a function getJson(url, { timeoutMs }) that uses plain fetch,
+throws on any non-2xx status, aborts after timeoutMs with AbortSignal.timeout,
+and returns the parsed JSON. Don't install any packages.
+Then call it on https://httpbin.org/status/404, on https://httpbin.org/delay/3
+with timeoutMs 1000, and on https://httpbin.org/json, and print what happens.
+Run it with node and show me the output.</code></pre>
+    <p>You should now see output similar to the captured output above, with an HTTP 404 error, a <code>TimeoutError</code>, and the keys of the JSON body.</p>
+  </li>
+  <li>
+    <p>Commit the toy, then ask the agent to write the same three calls with ky in a second file.</p>
+<pre><code>git add -A && git commit -m "Add getJson toy fetch wrapper"   # save the toy before the agent changes anything</code></pre>
+    <p>Then give the agent this prompt: "Install ky, write ky.mjs that makes the same three calls with ky, run both files, and show both outputs side by side." You should now see ky throw an <code>HTTPError</code> for the 404 and a <code>TimeoutError</code> for the slow call.</p>
+  </li>
+  <li>
+    <p>Ask the agent to collect the dependency signals for ky and print them as a table.</p>
+<pre><code>Collect these for the npm package ky and print a table: weekly downloads from
+https://api.npmjs.org/downloads/point/last-week/ky, latest version and its release date
+from npm view, licence, unpacked size, number of dependencies, and open issues from
+the GitHub API. Include the date you collected them.</code></pre>
+    <p>You should now see a table similar to the one above, with today's numbers.</p>
+  </li>
+  <li>
+    <p>Write <code>docs/decisions/0001-http-client.md</code> yourself, using the <a href="../reference/decision-record-template.html">template</a>, and choose between the wrapper and ky for the Module 1 project. Write the record without the agent, because the decision is yours.</p>
+    <p>You should now have a record with all five sections and a date next to every number.</p>
+  </li>
+</ol>
+
+<h2>Check yourself</h2>
+
+<p>Decide which option fits each situation. Recall the four options from memory first, without scrolling up.</p>
+
+<div class="classify" data-cats='["Build","Library","Self-hosted service","Hosted service"]' data-prompt="Which option fits best?">
+  <div class="item" data-answer="Build" data-why="A few lines of code that use the platform's own features are easier to own than a dependency, and there's nothing to run or host."><p>One page needs to wait 300 ms after the user stops typing before it searches.</p></div>
+  <div class="item" data-answer="Hosted service" data-why="With no backend team and a short deadline, a hosted login service removes the most work, and its free tier covers a small number of users."><p>A weekend demo needs a login for about 200 users, and nobody on the team can run servers.</p></div>
+  <div class="item" data-answer="Library" data-why="The company requires user data to stay in its own database, which rules out a hosted service, and a library such as better-auth runs inside the app with that database."><p>An app must keep user accounts in the company's existing PostgreSQL database, and there's no operations team.</p></div>
+  <div class="item" data-answer="Self-hosted service" data-why="Several apps need one shared login, the data must stay on the company's servers, and an operations team can run a separate server such as Keycloak."><p>A company has twelve internal apps that need one shared login, identity data must stay on its own servers, and it has an operations team.</p></div>
+  <div class="item" data-answer="Library" data-why="Many calls that need retries, timeouts and hooks are the case ky was written for, so maintaining your own version would repeat its work."><p>A large app makes hundreds of API calls, and it needs retries on 429 and 503, timeouts and shared headers.</p></div>
+</div>
+
+<div class="quiz"
+  data-q="Your agent's code calls fetch() on an API path that returns 404. Nothing checks response.ok. What happens next?"
+  data-opts='["The promise resolves and the code carries on","The promise rejects and the catch block runs","fetch retries twice and then throws an error","The browser blocks the response and logs it"]'
+  data-answer="0"
+  data-why="fetch() only rejects on network failures, so a 404 resolves normally and the code carries on with an error body. It doesn't reject, and it never retries on its own, because retries are a ky feature. The browser blocking a response is a CORS behaviour from lesson 7, which is unrelated to the status code."></div>
+
+<div class="source">
+  <a href="https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions">Michael Nygard, Documenting Architecture Decisions (2011)</a>. The article is short, and it is the original source of the decision record format. Read all of it, and notice why Nygard wants the records kept in the repo next to the code.
+</div>
+
+<div class="feedback-ask">When you finish, tell your teacher (the agent) two things. First, could you follow this lesson alone, on a scale of 1 to 5? Second, where did you get stuck, if anywhere? Your answers go into <code>feedback/module-1.md</code> and are used to improve the lesson.</div>
+
+<div class="footer-nav">
+Reference: <a href="../reference/decision-record-template.html">Decision record template</a>, <a href="../reference/glossary.html">Glossary</a><br>
+Previous: <a href="0007-same-origin-and-cors.html">Lesson 7, Why the browser blocks some requests</a><br>
+Next: <a href="0009-project-two-api-app.html">Project: a single-page app from two public APIs</a><br>
+Course: <a href="index.html">Course index</a><br>
+If anything is unclear, ask your teacher (the agent). For example, you could ask "What would I have to build myself if I wrote my own login instead of using better-auth?"
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script src="../assets/tooltip.js"></script>
+<script src="../assets/classify.js"></script>

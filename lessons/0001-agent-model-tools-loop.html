@@ -1,0 +1,202 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 1: An agent is a model, a set of tools and a loop</title>
+<link rel="stylesheet" href="../assets/course.css">
+<link rel="stylesheet" href="../assets/agent-loop.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Lesson 1: An agent is a model, a set of tools and a loop</h1>
+<p class="subtitle">About 30 minutes, Module 0 <span class="strand craft">Agent craft</span></p>
+
+<p class="why">Most habits in this course, e.g., starting fresh sessions and asking for proof, follow from how the agent loop works. When you know what the model can see and what it can't, you can predict when an agent will go wrong and steer it before it does.</p>
+
+<h2>The model only sees the text that the program sends it</h2>
+
+<p>You have used a chat assistant, where you type a message and get an answer back. The part that writes the answer is a language model, which is a program that takes text in and produces text out.</p>
+
+<p>A model can't open your files, run commands or look anything up by itself. It only reads the text it receives on each request, and that text is called the <span class="term" data-tip="The context window is all the text sent to the model on one request, i.e., the instructions, the tool list and the conversation so far. It has a maximum size, measured in tokens.">context window</span>.</p>
+
+<p>The model also keeps nothing between requests. Thorsten Ball explains in <a href="https://ampcode.com/how-to-build-an-agent">How to Build an Agent</a> that the provider's server "is stateless", so "we send the whole conversation every time".</p>
+
+<p>Anything that isn't in the context window doesn't exist for the model.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>A coding agent CLI such as Claude Code or Codex sends more than your message on each request. A typical request contains these parts:</p>
+<ul>
+  <li>a system prompt from the tool's makers, with general instructions</li>
+  <li>a list of the tools the model may ask for, with a description of each</li>
+  <li>the contents of your project's <code>AGENTS.md</code> file, if the project has one (lesson 3 covers <code>AGENTS.md</code>)</li>
+  <li>every message, tool call and tool result in the session so far</li>
+</ul>
+<p>If you tell the agent a fact in one session and then start a new session, the new context doesn't contain the fact. The agent only learns it again if the fact is written somewhere the agent reads, e.g., in a file in the repo.</p>
+</details>
+<p class="read-more">Read more: <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Anthropic, Effective context engineering for AI agents</a></p>
+
+<h2>Tools and a loop turn a model into an agent</h2>
+
+<p>A model that only produces text can describe a change, but it can't make one. Thorsten Ball defines an agent as "an <span class="term" data-tip="LLM stands for large language model, which is the kind of model behind coding agents.">LLM</span> with access to tools, giving it the ability to modify something outside the context window", and Anthropic describes agents as "LLMs using tools based on environmental feedback in a loop" (<a href="https://www.anthropic.com/engineering/building-effective-agents">Building Effective Agents</a>).</p>
+
+<p>A <span class="term" data-tip="A tool call is a structured request in the model's reply that names a tool and gives its input, e.g., run the command npm test. The model only writes the request, and the program runs it.">tool call</span> is a request that the model writes in its reply, e.g., "run the command <code>npm test</code>". The model only writes the request, and the program around the model does the work.</p>
+
+<p>The loop works like this:</p>
+<ol>
+  <li>First, the program sends the whole context to the model.</li>
+  <li>Second, the model replies with text, with a tool call, or with both.</li>
+  <li>Third, if the reply contains a tool call, the program runs the tool and adds the <span class="term" data-tip="A tool result is the output of a tool that the program ran, e.g., the contents of a file or the output of a command. The program adds it to the context.">tool result</span> to the context. Then it goes back to the first step.</li>
+  <li>Fourth, if the reply has no tool call, the loop ends and you see the answer.</li>
+</ol>
+
+<p>The coding CLI you use, e.g., Claude Code, Codex, opencode, pi or Amp, is the program that runs the loop. Its tools let the model read files, edit files and run shell commands. Many agent programs also stop after a maximum number of turns, which Anthropic calls a stopping condition.</p>
+
+<p>The session below is real. It was captured on 2026-10-14 with Claude Code and a small model, in a tiny project with a <code>cart.js</code> file and one test. Before each item appears, predict what kind of item comes next.</p>
+
+<div class="agent-loop" data-caption="Real session, captured 2026-10-14. Some lines of the tool results are shortened."
+     data-end-why="The last reply had text and no tool call, so the program stopped the loop and showed you the answer.">
+  <div class="turn" data-kind="user"><pre>What does the test script in this project run, and do the tests pass? Answer in two sentences.</pre></div>
+  <div class="turn" data-kind="call" data-why="The model can't see the files yet, so its first reply is a request to list them and print package.json."><pre>Bash: ls -la &amp;&amp; cat package.json 2&gt;/dev/null; ls scripts 2&gt;/dev/null</pre></div>
+  <div class="turn" data-kind="result" data-why="After every tool call, the program runs the tool and adds the output to the context. The exit code 2 comes from 'ls scripts', because that folder doesn't exist. The model sees the error and carries on."><pre>Exit code 2
+-rw-r--r-- 1 ... 124 Oct 14 19:57 cart.js
+-rw-r--r-- 1 ...  242 Oct 14 19:57 cart.test.js
+-rw-r--r-- 1 ...  88 Oct 14 19:57 package.json
+{
+  "name": "tiny-shop",
+  "version": "1.0.0",
+  "scripts": { "test": "node --test" }
+}</pre></div>
+  <div class="turn" data-kind="call" data-why="The model now knows the test script, but it hasn't seen the test result. The program sent the whole context again, and the model asked to read the code and run the tests."><pre>Bash: cat cart.js; echo ---; cat cart.test.js; echo ---; npm test 2&gt;&amp;1; echo "exit=$?"</pre></div>
+  <div class="turn" data-kind="result" data-why="The program ran the command and added its output. The test output is evidence from the project itself, so the model doesn't have to guess."><pre>function total(items) {
+  return items.reduce((sum, item) =&gt; sum + item.price * item.qty, 0);
+}
+...
+&gt; tiny-shop@1.0.0 test
+&gt; node --test
+
+✔ total adds price times quantity (0.626243ms)
+ℹ tests 1
+ℹ pass 1
+ℹ fail 0
+exit=0</pre></div>
+  <div class="turn" data-kind="text" data-why="The context now has everything the model needs, so it replies with text and no tool call."><pre>The test script is `node --test`, which runs Node's built-in test runner on `cart.test.js`. That single test ("total adds price times quantity") passes when I run `npm test`, with 1 pass and 0 failures.</pre></div>
+</div>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>Thorsten Ball's post uses a weather example. When the user asks about the weather in Munich, the model replies with a tool call similar to <code>get_weather(Munich)</code>. In his words, the program then does the rest: "We execute the tool, send the result back up to Claude, and ask again for Claude's response."</p>
+<p>The model in the session above asked for <code>ls scripts</code>, which failed. A model only knows what earlier tool results showed it, so it sometimes asks for things that don't exist. The error goes back into the context as a tool result, and the model adjusts on the next request.</p>
+</details>
+<p class="read-more">Read more: <a href="https://ampcode.com/how-to-build-an-agent">Thorsten Ball, How to Build an Agent</a> and <a href="https://www.anthropic.com/engineering/building-effective-agents">Anthropic, Building Effective Agents</a></p>
+
+<h2>Why a fresh and small context gives better results</h2>
+
+<p>In the session above, every tool result stayed in the context, and the program sent all of it again on the next request. In a long session, the context fills up with old file contents, failed attempts and earlier tasks.</p>
+
+<p>A longer context makes the model worse at using what is in it. Anthropic's engineers describe research on "context rot", which shows that "as the number of tokens in the context window increases, the model's ability to accurately recall information from that context decreases" (<a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Effective context engineering</a>).</p>
+
+<p>Mixing tasks makes the problem worse. The Amp documentation says "a thread that mixes unrelated work gives the agent a worse context to reason with", so it recommends one thread, i.e., one session, per task (<a href="https://ampcode.com/docs/threads">Amp threads</a>).</p>
+
+<p>For you, the practical result is a habit, which is to start a new session for each task and give it only the files and facts that the task needs. Lesson 2 turns the habit into a routine.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>Suppose you spend a session fixing a bug in the cart, and then you ask the same session to write a README. The context still holds the cart code, the failed fixes and the test output, so the model may describe the old broken behaviour in the README. A new session would see only the code as it is now.</p>
+<p>Suppose instead that the agent read a 3,000 line log file early in a session. Every later request sends the full log again, even if the task moved on. You can start a new session and point it at the one part of the log that matters, e.g., "read lines 200 to 240 of server.log".</p>
+</details>
+<p class="read-more">Read more: <a href="https://martinfowler.com/articles/exploring-gen-ai/context-engineering-coding-agents.html">Birgitta Böckeler, Context Engineering for Coding Agents</a></p>
+
+<h2>Do it</h2>
+<ol class="steps">
+  <li>
+    <p>Create a practice folder for Module 0, with a tiny project in it. Copy the whole block into your terminal.</p>
+<pre><code>mkdir -p ~/code/agents-lab/module-0/tiny-shop   # create the folder, including parent folders
+cd ~/code/agents-lab/module-0/tiny-shop         # move into it
+cat &gt; package.json &lt;&lt;'EOF'
+{
+  "name": "tiny-shop",
+  "version": "1.0.0",
+  "scripts": { "test": "node --test" }
+}
+EOF
+cat &gt; cart.js &lt;&lt;'EOF'
+function total(items) {
+  return items.reduce((sum, item) =&gt; sum + item.price * item.qty, 0);
+}
+module.exports = { total };
+EOF
+cat &gt; cart.test.js &lt;&lt;'EOF'
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./cart");
+test("total adds price times quantity", () =&gt; {
+  assert.strictEqual(total([{ price: 2, qty: 3 }, { price: 5, qty: 1 }]), 11);
+});
+EOF
+ls                                              # list the files you created</code></pre>
+    <p>You should now see <code>cart.js</code>, <code>cart.test.js</code> and <code>package.json</code>. Lesson 2 uses the same project.</p>
+  </li>
+  <li>
+    <p>Start your coding agent in the <code>tiny-shop</code> folder, and give it this read-only task:</p>
+<pre><code>What does the test script in this project run, and do the tests pass?
+Answer in two sentences. Don't change any files.</code></pre>
+    <p>You should now see the agent run one or more commands, e.g., reading <code>package.json</code> and running <code>npm test</code>, and then give a two-sentence answer.</p>
+  </li>
+  <li>
+    <p>Scroll back through the session and write down each item in order, labelled as your message, a tool call, a tool result or model text. Most CLIs show tool calls with the tool's name, e.g., <code>Bash</code> or <code>Read</code>, and show the output underneath.</p>
+    <p>You should now have a list that starts with your message and ends with model text that has no tool call after it.</p>
+  </li>
+  <li>
+    <p>Count the model replies in your list, i.e., the tool calls and the final text. Each reply means that the program sent the whole context to the model one more time.</p>
+    <p>You should now have a number, e.g., 3 for the session above, and you can see how much text the last request carried.</p>
+  </li>
+  <li>
+    <p>Optional, and only if you have an API key and are happy to pay a few cents: ask an agent to build the toy agent from Thorsten Ball's post, in JavaScript. You read and direct, and the agent writes the code.</p>
+<pre><code>Read https://ampcode.com/how-to-build-an-agent and build the same agent in Node,
+in a new folder called toy-agent, with only the read_file and list_files tools.
+Read the API key from the ANTHROPIC_API_KEY environment variable and never write it to a file.
+When it works, show me one session where it calls a tool.</code></pre>
+    <p>You should now see a small program that prints the model's tool calls and results as it runs, which is the same loop you labelled in step 3.</p>
+  </li>
+</ol>
+
+<h2>Check yourself</h2>
+
+<p>Sort each item from a session into its kind. Try to answer from memory without scrolling up.</p>
+
+<div class="classify" data-cats='["Model text","Tool call","Tool result"]' data-prompt="What kind of item is it?">
+  <div class="item" data-answer="Tool result" data-why="The program ran npm test and added the output to the context, so it is a tool result."><pre><code>ℹ tests 1
+ℹ pass 1
+ℹ fail 0</code></pre></div>
+  <div class="item" data-answer="Tool call" data-why="The model wrote a request to run a command. The program will run it."><pre><code>Bash: cat cart.js</code></pre></div>
+  <div class="item" data-answer="Model text" data-why="The model wrote an answer for you and didn't ask for a tool, so the loop ends after it."><p>"The test script runs Node's built-in test runner, and the single test passes."</p></div>
+  <div class="item" data-answer="Tool result" data-why="An error message from a command is still a tool result. The program adds it to the context so the model can react."><pre><code>Exit code 2
+ls: cannot access 'scripts': No such file or directory</code></pre></div>
+  <div class="item" data-answer="Tool call" data-why="The model asked the program to read a file. The model can't read files itself."><pre><code>Read: package.json</code></pre></div>
+</div>
+
+<div class="quiz"
+  data-q="You start a new session and ask the agent to continue yesterday's work. What does the model know about yesterday?"
+  data-opts='["Only what this new session&apos;s context contains","Everything it was told during yesterday&apos;s session","Whatever the provider&apos;s server saved from yesterday","Nothing at all, since models can&apos;t read"]'
+  data-answer="0"
+  data-why="The model only sees the current context. It wasn't told anything yesterday that it still holds, and the provider's server keeps nothing between requests. The last option is wrong too, because the agent can read yesterday's notes or code through its tools, which puts them into the new context. Lesson 3 uses that fact."></div>
+
+<div class="quiz"
+  data-q="When the model asks to run npm test, who runs the command?"
+  data-opts='["The program that runs the loop","The model inside the provider&apos;s server","The provider&apos;s server after the reply","Your shell, without the program involved"]'
+  data-answer="0"
+  data-why="The model only writes the request. The agent program, e.g., Claude Code or Codex, runs the command on your machine and adds the output to the context. The provider's server only runs the model, and your shell runs the command only because the program started it."></div>
+
+<div class="source">
+  <a href="https://ampcode.com/how-to-build-an-agent">Thorsten Ball, How to Build an Agent</a> (April 2025). Read the introduction and the part where the first tool is added. The code is in Go, and you don't need to follow it line by line. Focus on the prose that explains the loop.
+</div>
+
+<div class="feedback-ask">When you finish, tell your teacher (the agent) two things. First, could you follow this lesson alone, on a scale of 1 to 5? Second, where did you get stuck, if anywhere? Your answers go into <code>feedback/module-0.md</code> and are used to improve the lesson.</div>
+
+<div class="footer-nav">
+Reference: <a href="../reference/agent-session-checklist.html">Agent session checklist</a>, <a href="../reference/glossary.html">Glossary</a><br>
+Next: <a href="0002-directing-an-agent-session.html">Lesson 2, Directing one agent session from plan to proof</a><br>
+Course: <a href="index.html">Course index</a><br>
+If anything is unclear, ask your teacher (the agent). For example, you could ask "What is in the system prompt and tool list that my agent CLI sends, and can I see it?"
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script src="../assets/tooltip.js"></script>
+<script src="../assets/classify.js"></script>
+<script src="../assets/agent-loop.js"></script>

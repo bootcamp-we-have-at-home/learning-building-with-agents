@@ -1,0 +1,49 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossary</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Glossary</h1>
+<p class="subtitle">The terms used across the course. Lessons use these words with these meanings. The last column links the lesson that introduces each term.</p>
+
+<table>
+  <tr><th>Term</th><th>Meaning</th><th>Lesson</th></tr>
+  <tr><td><strong>Acceptance criteria</strong></td><td>Testable conditions that a user story must meet before it counts as done.</td><td><a href="../lessons/0009-project-two-api-app.html">9</a></td></tr>
+  <tr><td><strong>AGENTS.md</strong></td><td>A Markdown file in a repo that tells coding agents how to work in it, e.g., the build and test commands, the conventions and the limits.</td><td><a href="../lessons/0003-knowledge-in-the-repo.html">3</a></td></tr>
+  <tr><td><strong>Compaction</strong></td><td>A tool replaces older messages in the context with a summary, so the session can continue when the context is nearly full.</td><td><a href="../lessons/0003-knowledge-in-the-repo.html">3</a></td></tr>
+  <tr><td><strong>Context rot</strong></td><td>The model recalls information from its context less accurately as the context gets longer (Anthropic).</td><td><a href="../lessons/0001-agent-model-tools-loop.html">1</a></td></tr>
+  <tr><td><strong>Context window</strong></td><td>All the text sent to the model on one request, i.e., the instructions, the tool list and the conversation so far.</td><td><a href="../lessons/0001-agent-model-tools-loop.html">1</a></td></tr>
+  <tr><td><strong>CORS</strong></td><td>Cross-Origin Resource Sharing, a set of response headers that tell the browser which other origins may read a server&#x27;s responses.</td><td><a href="../lessons/0007-same-origin-and-cors.html">7</a></td></tr>
+  <tr><td><strong>Decision record</strong></td><td>A short Markdown file in the repo that says what was decided, which options were compared, and why.</td><td><a href="../lessons/0008-build-buy-or-self-host.html">8</a></td></tr>
+  <tr><td><strong>Dependency</strong></td><td>A package that your project installs from npm and needs in order to run.</td><td><a href="../lessons/0008-build-buy-or-self-host.html">8</a></td></tr>
+  <tr><td><strong>Directed prompt</strong></td><td>A prompt that gives the goal, the files, the design, the edge cases with tests, the limits and the proof required.</td><td><a href="../lessons/0002-directing-an-agent-session.html">2</a></td></tr>
+  <tr><td><strong>DNS</strong></td><td>Domain Name System, the directory that turns a name such as example.com into an IP address.</td><td><a href="../lessons/0005-reading-one-request.html">5</a></td></tr>
+  <tr><td><strong>Handoff note</strong></td><td>A short note with the goal, decisions, files and open questions, written so that a new session can continue the work.</td><td><a href="../lessons/0003-knowledge-in-the-repo.html">3</a></td></tr>
+  <tr><td><strong>Header</strong></td><td>A name and value pair sent before the body of a request or response, describing the body, the client or caching rules.</td><td><a href="../lessons/0006-http-methods-status-headers.html">6</a></td></tr>
+  <tr><td><strong>Hosted service</strong></td><td>A program that a company runs on its servers and that your app calls, paid for with money or a limited free tier.</td><td><a href="../lessons/0008-build-buy-or-self-host.html">8</a></td></tr>
+  <tr><td><strong>Idempotent method</strong></td><td>A method where sending the same request several times has the same intended effect as sending it once, e.g., PUT and DELETE.</td><td><a href="../lessons/0006-http-methods-status-headers.html">6</a></td></tr>
+  <tr><td><strong>LLM</strong></td><td>Large language model, the kind of model behind coding agents.</td><td><a href="../lessons/0001-agent-model-tools-loop.html">1</a></td></tr>
+  <tr><td><strong>llms.txt</strong></td><td>A Markdown index of a documentation site, written for language models to read.</td><td><a href="../lessons/0004-learning-a-library-with-an-agent.html">4</a></td></tr>
+  <tr><td><strong>Method</strong></td><td>The word at the start of a request, e.g., GET or POST, that says what action the client asks for.</td><td><a href="../lessons/0006-http-methods-status-headers.html">6</a></td></tr>
+  <tr><td><strong>Origin</strong></td><td>The scheme, host and port of a URL together, e.g., https://example.com:443.</td><td><a href="../lessons/0007-same-origin-and-cors.html">7</a></td></tr>
+  <tr><td><strong>Preflight request</strong></td><td>An OPTIONS request that the browser sends before a cross-origin request that isn&#x27;t simple, to ask whether the real request is allowed.</td><td><a href="../lessons/0007-same-origin-and-cors.html">7</a></td></tr>
+  <tr><td><strong>Safe method</strong></td><td>A method where the client asks only to read and expects no change on the server, e.g., GET and HEAD.</td><td><a href="../lessons/0006-http-methods-status-headers.html">6</a></td></tr>
+  <tr><td><strong>Same-origin policy</strong></td><td>A browser rule that stops JavaScript on one origin from reading responses from another origin, unless that origin allows it with CORS.</td><td><a href="../lessons/0007-same-origin-and-cors.html">7</a></td></tr>
+  <tr><td><strong>Self-hosted service</strong></td><td>A separate program that you install and run on your own server, and that your app talks to over HTTP.</td><td><a href="../lessons/0008-build-buy-or-self-host.html">8</a></td></tr>
+  <tr><td><strong>Session trailer</strong></td><td>A Session: line at the end of a commit message that points to the saved transcript of the agent session behind the commit.</td><td><a href="../lessons/0003-knowledge-in-the-repo.html">3</a></td></tr>
+  <tr><td><strong>Spike</strong></td><td>A small throwaway program, kept outside the project, that answers one question about a library.</td><td><a href="../lessons/0004-learning-a-library-with-an-agent.html">4</a></td></tr>
+  <tr><td><strong>Static site</strong></td><td>A site made only of HTML, CSS and JavaScript files, with no server code, so anyone can read every published file.</td><td><a href="../lessons/0009-project-two-api-app.html">9</a></td></tr>
+  <tr><td><strong>Status code</strong></td><td>The three-digit number in a response. Its first digit gives its class, from 1xx to 5xx.</td><td><a href="../lessons/0006-http-methods-status-headers.html">6</a></td></tr>
+  <tr><td><strong>TCP</strong></td><td>Transmission Control Protocol, which opens a reliable connection to an IP address and port. The connection starts with a three-message handshake.</td><td><a href="../lessons/0005-reading-one-request.html">5</a></td></tr>
+  <tr><td><strong>TLS</strong></td><td>Transport Layer Security, which checks the server&#x27;s certificate and encrypts the connection. HTTPS is HTTP over TLS.</td><td><a href="../lessons/0005-reading-one-request.html">5</a></td></tr>
+  <tr><td><strong>Tool call</strong></td><td>A structured request in the model&#x27;s reply that names a tool and its input. The agent program runs the tool, and the model doesn&#x27;t.</td><td><a href="../lessons/0001-agent-model-tools-loop.html">1</a></td></tr>
+  <tr><td><strong>Tool result</strong></td><td>The output of a tool that the agent program ran, added to the context for the next model request.</td><td><a href="../lessons/0001-agent-model-tools-loop.html">1</a></td></tr>
+  <tr><td><strong>Training cutoff</strong></td><td>The date after which the model saw no new data, so it doesn&#x27;t know later changes to a library unless they are put in its context.</td><td><a href="../lessons/0004-learning-a-library-with-an-agent.html">4</a></td></tr>
+  <tr><td><strong>Weekly downloads</strong></td><td>The number of times npm served a package in one week, including automated builds, so it overstates the number of users.</td><td><a href="../lessons/0008-build-buy-or-self-host.html">8</a></td></tr>
+</table>
+
+<div class="footer-nav">
+<a href="../lessons/index.html">Course index</a>, <a href="glossary.html">Glossary</a>, <a href="agent-failure-catalog.html">Agent failure catalog</a>, <a href="reading-http.html">Reading HTTP evidence</a>, <a href="agent-session-checklist.html">Agent session checklist</a>
+</div>

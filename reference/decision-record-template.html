@@ -1,0 +1,88 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision record template</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Decision record template</h1>
+<p class="subtitle">Reference sheet for build, buy or self-host choices, first used in <a href="../lessons/0008-build-buy-or-self-host.html">lesson 8</a></p>
+
+<p>A decision record is a short Markdown file that says what you decided and why. You keep it in the repo, so the next person or the next agent session can read the reason before changing the decision. The format below follows Michael Nygard's original proposal, <a href="https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions">Documenting Architecture Decisions</a> (2011), and adds a section for the options you compared and a section for when to revisit the decision.</p>
+
+<p>Save each record as <code>docs/decisions/NNNN-short-name.md</code>, numbered in order, and never delete an old record. When a decision changes, write a new record and set the old one's status to "Superseded by 0005".</p>
+
+<h2>Template</h2>
+<pre><code># NNNN. Short name of the decision
+
+Status: Proposed | Accepted | Superseded by NNNN
+Date: YYYY-MM-DD
+
+## Context
+What problem are you solving, and what limits apply?
+State facts, e.g., team size, deadline, where data must live, budget.
+
+## Options
+1. Build it yourself: what you would write and maintain.
+2. Use a library: name, version, licence, and the signals you checked.
+3. Run a self-hosted service: what you would install and operate.
+4. Use a hosted service: provider, price, and where your data goes.
+Leave out any option that doesn't apply, and say why.
+
+## Decision
+We will ...
+
+## Consequences
+What gets easier, what gets harder, and what you now depend on.
+
+## When to revisit
+A concrete trigger, e.g., "if we need retries on POST requests"
+or "if the library has no release for 12 months".</code></pre>
+
+<h2>Filled example</h2>
+<pre><code># 0001. HTTP client for calling public APIs
+
+Status: Accepted
+Date: 2026-10-14
+
+## Context
+The single-page app calls two public JSON APIs from the browser.
+Plain fetch() resolves on 404 and 500, so every call site would need
+its own `if (!res.ok)` check, and fetch() has no timeout by default.
+I'm the only developer, and the app has five API calls.
+
+## Options
+1. Build: a getJson(url) wrapper of about five lines that uses
+   AbortSignal.timeout() and throws on non-2xx. I own and test it.
+2. Library: ky 2.2.0, MIT, no dependencies, about 7.2 million
+   weekly downloads, last release 2026-10-09 (checked 2026-10-14).
+   It adds retries on 408, 413, 429, 500, 502, 503 and 504, hooks,
+   and a default 10-second timeout.
+3. Self-hosted service: does not apply, because an HTTP client is code
+   that runs inside the app.
+4. Hosted service: does not apply, for the same reason.
+
+## Decision
+We will use the five-line getJson wrapper, because five calls don't need
+retries or hooks, and the wrapper has no dependency to update.
+
+## Consequences
+I have to write and maintain tests for the wrapper. If an API starts
+returning 429 (rate limited), the app fails instead of retrying.
+
+## When to revisit
+If we need retries or rate-limit handling, switch to ky and supersede
+this record.</code></pre>
+
+<h2>Checklist before you accept a record</h2>
+<ul>
+  <li>Every number in the record has the date when you checked it.</li>
+  <li>The record names what you would have to maintain for each option.</li>
+  <li>The record says who stores the data and who fixes security bugs.</li>
+  <li>The "When to revisit" section has a trigger that someone can check.</li>
+</ul>
+
+<div class="footer-nav">
+Course: <a href="../lessons/index.html">Course index</a><br>
+Used in: <a href="../lessons/0008-build-buy-or-self-host.html">Lesson 8</a>, <a href="../lessons/0009-project-two-api-app.html">the Module 1 project</a>
+</div>

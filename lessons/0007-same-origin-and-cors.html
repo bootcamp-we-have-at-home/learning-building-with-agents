@@ -1,0 +1,182 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 7: Why the browser blocks some requests, with same-origin and CORS</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Lesson 7: Why the browser blocks some requests, with same-origin and CORS</h1>
+<p class="subtitle">About 40 minutes, Module 1 <span class="strand systems">Systems model</span><span class="strand craft">Agent craft</span></p>
+
+<p class="why">The GSG week 3 project brief tells you to check "Are there issues with CORS requests?" before you choose an API, because a CORS error can block a front-end-only app completely. Agents often respond to a CORS error with a header or a workaround that removes the error and also removes a protection, so you need to know which fix is correct.</p>
+
+<h2>An origin is the scheme, host and port of a page</h2>
+
+<p>In lesson 5, the URL <code>https://example.com</code> had a scheme (<code>https</code>), a host (<code>example.com</code>) and a port (443). The browser combines the three parts into the page's <span class="term" data-tip="The scheme, host and port of a URL together, e.g., http://localhost:5500. The path is not part of the origin.">origin</span>, and MDN defines it this way: "Two URLs have the same origin if the protocol, port (if specified), and host are the same for both" (<a href="https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Same-origin_policy">MDN, same-origin policy</a>).</p>
+
+<p>For example, a page at <code>http://localhost:5500</code> and an API at <code>http://localhost:5600</code> have different origins, because the ports differ. In your projects, the front end and the API often run on different ports during development, so they are cross-origin even though both run on your laptop.</p>
+
+<p>The <span class="term" data-tip="A browser rule that stops JavaScript on one origin from reading responses from another origin, unless the other origin allows it with CORS headers.">same-origin policy</span> is a rule that the browser enforces. It stops JavaScript on one origin from reading a response that came from another origin, unless the other server says the read is allowed.</p>
+
+<p>The browser usually sends the request and blocks only the reading of the response, so the server receives the request and answers it.</p>
+
+<p>The following output shows the rule in action. It was captured on 2026-10-14 with two small Node servers and Chromium 151. A page on port 5500 called <code>fetch("http://localhost:5600/api/products")</code>, and the API server on port 5600 sent no CORS headers. The API server's own log shows that it received the request:</p>
+<pre><code>GET /api/products Origin: http://localhost:5500</code></pre>
+<p>The API answered with status <code>200</code> and the product list. The browser then refused to give the response to the page's JavaScript, and it printed this message in the console:</p>
+<pre><code>Access to fetch at 'http://localhost:5600/api/products' from origin 'http://localhost:5500'
+has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the
+requested resource.</code></pre>
+
+<p><span class="term" data-tip="Cross-Origin Resource Sharing. A set of HTTP headers that a server sends to tell the browser which other origins may read its responses.">CORS</span>, which stands for Cross-Origin Resource Sharing, is the way a server tells the browser which other origins may read its responses. The main header is <code>Access-Control-Allow-Origin</code>, and its value is either one exact origin, e.g., <code>http://localhost:5500</code>, or <code>*</code> for any origin (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS">MDN, CORS</a>).</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>MDN compares the URL <code>http://store.company.com/dir/page.html</code> with other URLs. The comparisons below come from the MDN page:</p>
+<table>
+  <tr><th>URL</th><th>Same origin?</th><th>Reason</th></tr>
+  <tr><td><code>http://store.company.com/dir2/other.html</code></td><td>Yes</td><td>Only the path differs.</td></tr>
+  <tr><td><code>https://store.company.com/page.html</code></td><td>No</td><td>The scheme differs.</td></tr>
+  <tr><td><code>http://store.company.com:81/dir/page.html</code></td><td>No</td><td>The port differs, because <code>http://</code> uses port 80 by default.</td></tr>
+  <tr><td><code>http://news.company.com/dir/page.html</code></td><td>No</td><td>The host differs.</td></tr>
+</table>
+<p>You saw CORS headers on real APIs in lesson 6 without noticing them. The GitHub API and httpbin.org both sent <code>access-control-allow-origin: *</code> on 2026-10-14, so any web page can read their public responses from JavaScript.</p>
+</details>
+<p class="read-more">Read more: <a href="https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Same-origin_policy">MDN, same-origin policy</a></p>
+
+<h2>Simple requests and preflighted requests</h2>
+
+<p>The <code>GET</code> request in the previous section went straight to the server, but some requests need the browser to ask for permission first. MDN calls the requests that go straight through "simple requests", and a simple request must meet all of its conditions. The method must be <code>GET</code>, <code>HEAD</code> or <code>POST</code>, and the <code>Content-Type</code> can only be <code>application/x-www-form-urlencoded</code>, <code>multipart/form-data</code> or <code>text/plain</code>, among other conditions (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS">MDN, CORS</a>).</p>
+
+<p>For any other request, the browser first sends a <span class="term" data-tip="An OPTIONS request that the browser sends before a cross-origin request that is not simple, to ask the server whether the real request is allowed.">preflight request</span> with the <code>OPTIONS</code> method. The preflight carries headers such as <code>Access-Control-Request-Method</code>, and the browser sends the real request only if the server's answer allows it.</p>
+
+<p>A <code>POST</code> that sends JSON is not a simple request, because <code>application/json</code> is not on the list of allowed content types. When the same test page sent a JSON <code>POST</code> to an API without CORS headers, the API's log showed only the preflight, and the <code>POST</code> itself was never sent:</p>
+<pre><code>OPTIONS /api/cart Origin: http://localhost:5500</code></pre>
+<p>The console message then named the preflight as the failing step:</p>
+<pre><code>Access to fetch at 'http://localhost:5600/api/cart' from origin 'http://localhost:5500'
+has been blocked by CORS policy: Response to preflight request doesn't pass access control
+check: No 'Access-Control-Allow-Origin' header is present on the requested resource.</code></pre>
+
+<p>The page's JavaScript gets almost no detail about a CORS failure. MDN says that "specifics about the error are not available to JavaScript", and in the test above the <code>fetch()</code> promise rejected with only <code>TypeError: Failed to fetch</code>. The full reason is only in the browser's console and Network tab, so an agent that reads only the JavaScript error is guessing.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>A request that sends a custom header, e.g., <code>Authorization: Bearer ...</code>, also needs a preflight, because <code>Authorization</code> is not one of the headers that a simple request may set. Most requests to a private API carry that header, so most of them are preflighted.</p>
+<p>When the test API was changed to answer with <code>Access-Control-Allow-Origin: http://localhost:5500</code>, <code>Access-Control-Allow-Methods: GET, POST</code> and <code>Access-Control-Allow-Headers: Content-Type</code>, the log showed both requests, the preflight and then the real one:</p>
+<pre><code>OPTIONS /api/cart Origin: http://localhost:5500
+POST /api/cart Origin: http://localhost:5500</code></pre>
+</details>
+<p class="read-more">Read more: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS">MDN, CORS</a>, the "Preflighted requests" section</p>
+
+<h2>Judging the agent's CORS fix</h2>
+
+<p>CORS controls what JavaScript in a browser may read, and it doesn't stop anyone from calling the server. The curl command below asked the same test API for the products on 2026-10-14, while the API still sent no CORS headers, and the API returned the data:</p>
+<pre><code>$ curl -s -i http://localhost:5600/api/products
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+[{"id":1,"name":"mug"}]</code></pre>
+<p>Curl doesn't apply the same-origin policy, and neither do scripts or other servers. CORS is not access control for your API, so a private API still needs authentication, which Module 4 covers.</p>
+
+<p>The fix an agent reaches for most often is <code>Access-Control-Allow-Origin: *</code>, and the wildcard is correct in one case. It is fine for public data that anyone may read and that needs no cookies, e.g., the GitHub API's public repository data.</p>
+
+<p>The wildcard is wrong when the browser sends credentials such as cookies. MDN says the server "must not specify the * wildcard" for a credentialed request, and the browser blocks the response. The test page sent a request with <code>credentials: "include"</code> to an API that answered with <code>*</code>, and Chromium printed this message:</p>
+<pre><code>Access to fetch at 'http://localhost:5600/api/products' from origin 'http://localhost:5500'
+has been blocked by CORS policy: The value of the 'Access-Control-Allow-Origin' header in the
+response must not be the wildcard '*' when the request's credentials mode is 'include'.</code></pre>
+<p>For your own API, the correct fix is to name the exact origin of your front end, and to add <code>Access-Control-Allow-Credentials: true</code> only when the front end sends cookies.</p>
+
+<p>A different problem is a third-party API that sends no CORS headers at all. You can't change another company's server, so no change in your front-end code can make the browser accept the response. The fix is to call the API from your own server and to have your page call your server, which Module 2 builds. Agents sometimes suggest a public "CORS proxy" service instead, but the proxy service then sees every request and response, including any API key that you send through it.</p>
+
+<p>The same reasoning applies to API keys. Any key that your front-end JavaScript sends is visible to every visitor in the Network tab, so the GSG brief's question "Is a free API key available?" leads to a second question, which is whether the key must stay secret. A key that must stay secret belongs on a server.</p>
+
+<details class="examples"><summary>More examples (optional)</summary>
+<p>An agent that can't fix a CORS error sometimes suggests launching Chrome with web security turned off. The page then works on your machine and fails for every user, because the users' browsers still enforce the same-origin policy. Treat any fix that changes your browser rather than the server's headers as hiding the error.</p>
+<p>Another example is an agent that adds the CORS header to the page server instead of the API server. The header has to come from the server whose response is being read, i.e., the API on port 5600 in the test above, so adding it to the page server on port 5500 changes nothing.</p>
+</details>
+<p class="read-more">Read more: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS">MDN, CORS</a>, the "Requests with credentials" section, and the <a href="https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html">OWASP Secrets Management cheat sheet</a></p>
+
+<h2>Do it</h2>
+<ol class="steps">
+  <li>
+    <p>Create a folder for this lab inside your module folder from lesson 5.</p>
+<pre><code>mkdir -p ~/code/agents-lab/module-1/cors   # a new folder for this lab
+cd ~/code/agents-lab/module-1/cors         # move into it</code></pre>
+    <p>You should now see the new path when you run <code>pwd</code>.</p>
+  </li>
+  <li>
+    <p>Open your coding agent in the folder, and give it this prompt. The prompt asks for no CORS headers on purpose.</p>
+<pre><code>Create two Node servers using only the built-in http module, with no npm packages.
+1. page-server.js listens on port 5500 and serves one HTML page. The page calls
+   fetch("http://localhost:5600/api/products") and shows the JSON on the page,
+   or shows "fetch failed: " plus the error message if the fetch rejects.
+2. api-server.js listens on port 5600. For every request it logs the method, the URL
+   and the Origin header, then answers 200 with [{"id":1,"name":"mug"}] as JSON.
+Do not add any CORS headers. Do not start the servers; I will run them myself.</code></pre>
+    <p>You should now see the files <code>page-server.js</code> and <code>api-server.js</code> in the folder. Read both files before you run them, and check that neither one sets an <code>Access-Control</code> header.</p>
+  </li>
+  <li>
+    <p>Start each server in its own terminal window, from the same folder.</p>
+<pre><code>node api-server.js    # terminal 1, leave it running
+node page-server.js   # terminal 2, leave it running</code></pre>
+    <p>You should now see each server print that it is listening, and both terminals stay busy. You stop a server later with Ctrl+C.</p>
+  </li>
+  <li>
+    <p>Open <code>http://localhost:5500</code> in Chrome or Firefox, press F12 to open the developer tools, and select the Console tab. Reload the page once with the tools open.</p>
+    <p>You should now see "fetch failed" on the page and a CORS message in the console that says no <code>Access-Control-Allow-Origin</code> header is present. Terminal 1 should show a <code>GET /api/products</code> line, which proves the request reached the server.</p>
+  </li>
+  <li>
+    <p>Select the Network tab in the developer tools, reload the page, and select the request to <code>localhost:5600</code> in the list.</p>
+    <p>You should now see that the browser marks the request as failed because of CORS, even though terminal 1 shows that the server answered it.</p>
+  </li>
+  <li>
+    <p>Run curl against the API in a third terminal, to see that CORS doesn't apply outside the browser.</p>
+<pre><code>curl -i http://localhost:5600/api/products   # no browser, so no same-origin policy</code></pre>
+    <p>You should now see <code>HTTP/1.1 200 OK</code> and the product list, with no error.</p>
+  </li>
+  <li>
+    <p>Give your agent this prompt, and then judge its fix with the questions under the prompt.</p>
+<pre><code>The page on port 5500 can't read the response from the API on port 5600 because of CORS.
+Fix it. Tell me which file you changed and which header you added, and why.
+Then show me curl -i output from the API that proves the header is there.</code></pre>
+    <p>You should now see a change to <code>api-server.js</code> and curl output with an <code>Access-Control-Allow-Origin</code> header. Before you accept the change, check three things. The header must be on the API server, the value should be <code>http://localhost:5500</code> rather than <code>*</code>, and the agent must not have suggested changing browser settings. Restart terminal 1 with Ctrl+C and <code>node api-server.js</code>, reload the page, and confirm that the product list appears. Stop both servers with Ctrl+C when you finish.</p>
+  </li>
+</ol>
+
+<h2>Check yourself</h2>
+
+<p>Answer from memory first, because recalling the answer is what makes it stick.</p>
+
+<div class="classify" data-cats='["Name the exact origin","The wildcard is fine","Call it from a server"]' data-prompt="Which fix fits the situation?">
+  <div class="item" data-answer="Name the exact origin" data-why="The front end is yours, and it sends cookies, so the API must name http://localhost:5173 and allow credentials. The wildcard doesn't work with credentials."><p>Your React front end on <code>localhost:5173</code> calls your own API on <code>localhost:3000</code>, and the user logs in with a cookie.</p></div>
+  <div class="item" data-answer="The wildcard is fine" data-why="The data is public, read-only and needs no cookies, which is the case where * is correct."><p>Your API publishes a public list of bus times that any website may show, and no login is involved.</p></div>
+  <div class="item" data-answer="Call it from a server" data-why="You can't add headers to another company's server, so the browser will keep blocking the response. Your own server isn't subject to the same-origin policy."><p>A third-party news API sends no CORS headers, and your front-end page needs its data.</p></div>
+  <div class="item" data-answer="Call it from a server" data-why="Anything the browser sends is visible in the Network tab, so a secret key has to stay on a server."><p>A weather API works from the browser, but it needs a paid key that must stay secret.</p></div>
+</div>
+
+<div class="quiz"
+  data-q="A page's fetch() rejects with TypeError: Failed to fetch. The API server's log shows the GET request arrived, and the server answered 200. What happened?"
+  data-opts='["The browser stopped the page reading it","The server refused the request before answering","The network lost the response on return","The page used the wrong HTTP method"]'
+  data-answer="0"
+  data-why="The log proves the server received and answered the request, so the server didn't refuse it and the method was accepted. A lost response is possible in theory, but the most likely cause is the same-origin policy, because the browser blocks the reading of a cross-origin response that has no Access-Control-Allow-Origin header. The console message would confirm it."></div>
+
+<div class="quiz"
+  data-q="An agent says it fixed a CORS error and shows that curl now gets the data from the API. Why is that not proof?"
+  data-opts='["Curl never applies a same-origin policy check","Curl always adds the CORS headers itself","Curl sends requests from the same origin","Curl only works on localhost API servers"]'
+  data-answer="0"
+  data-why="Curl isn't a browser, so it reads any response whether or not CORS headers are present, and it got the data before the fix too. Curl doesn't add CORS headers to responses, it has no page origin, and it works with any server. The proof has to come from the browser, or from curl -i output that shows the Access-Control-Allow-Origin header."></div>
+
+<div class="source">
+  <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS">MDN, Cross-Origin Resource Sharing (CORS)</a>. Read "Functional overview" and then "Simple requests", "Preflighted requests" and "Requests with credentials" under "Examples of access control scenarios". The sections match the three parts of this lesson.
+</div>
+
+<div class="feedback-ask">When you finish, tell your teacher (the agent) two things. First, could you follow this lesson alone, on a scale of 1 to 5? Second, where did you get stuck, if anywhere? Your answers go into <code>feedback/module-1.md</code> and are used to improve the lesson.</div>
+
+<div class="footer-nav">
+Reference: <a href="../reference/reading-http.html">Reading HTTP evidence</a>, <a href="../reference/agent-failure-catalog.html">Agent failure catalog</a>, <a href="../reference/glossary.html">Glossary</a><br>
+Previous: <a href="0006-http-methods-status-headers.html">Lesson 6, HTTP methods, status codes and headers</a><br>
+Next: <a href="0008-build-buy-or-self-host.html">Lesson 8, Deciding whether to build, buy or self-host, starting with fetch</a><br>
+Course: <a href="index.html">Course index</a><br>
+If anything is unclear, ask your teacher (the agent). For example, you could ask "Why does the browser send the request at all if it is going to block the response?"
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script src="../assets/tooltip.js"></script>
+<script src="../assets/classify.js"></script>

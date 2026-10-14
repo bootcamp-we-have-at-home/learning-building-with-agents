@@ -1,0 +1,94 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading HTTP evidence</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/layout.js"></script>
+
+<h1>Reading HTTP evidence</h1>
+<p class="subtitle">Reference sheet for Module 1, built from lessons 5, 6 and 7. All output was captured on 2026-10-14.</p>
+
+<h2>The five systems a request passes through</h2>
+<table>
+  <tr><th>Order</th><th>System</th><th>What it does</th><th>Where you see it in <code>curl -v</code></th></tr>
+  <tr><td>1</td><td>DNS</td><td>Turns a name into an IP address</td><td><code>* Host ... was resolved</code>, then the IPv4 and IPv6 lines</td></tr>
+  <tr><td>2</td><td>TCP</td><td>Opens a connection to an IP address and port</td><td><code>* Trying ...</code> and <code>* Established connection</code></td></tr>
+  <tr><td>3</td><td>TLS</td><td>Checks the certificate and encrypts the connection</td><td><code>* TLSv1.3 ... handshake</code> and <code>* Server certificate:</code></td></tr>
+  <tr><td>4</td><td>HTTP</td><td>Carries the request and the response</td><td>Lines starting with <code>&gt;</code> (sent) and <code>&lt;</code> (received)</td></tr>
+  <tr><td>5</td><td>Application</td><td>Server code that decides the response</td><td>The status code and the body</td></tr>
+</table>
+<p>In <code>curl -v</code> output, <code>*</code> marks a note from curl, <code>&gt;</code> marks a header that curl sent, <code>&lt;</code> marks a header that curl received, and <code>{</code> or <code>}</code> marks raw data (<code>man curl</code>, <code>--verbose</code>). Timings from <code>-w</code> count from the start of the request, so you subtract the previous value to get one step's time.</p>
+
+<h2>Errors and the system that failed</h2>
+<table>
+  <tr><th>Evidence</th><th>System</th><th>Meaning</th><th>A fix that hides the problem</th></tr>
+  <tr><td><code>curl: (6) Could not resolve host</code></td><td>DNS</td><td>The name is wrong or doesn't exist</td><td>Hardcoding an IP address</td></tr>
+  <tr><td><code>curl: (7) Failed to connect ... Could not connect to server</code></td><td>TCP</td><td>Nothing is listening on that port</td><td>Editing route code when the server isn't running</td></tr>
+  <tr><td><code>curl: (28) Connection timed out</code></td><td>TCP</td><td>Nothing answered, e.g., a wrong address or a firewall</td><td>Raising the timeout</td></tr>
+  <tr><td><code>curl: (60) SSL certificate ...</code></td><td>TLS</td><td>The certificate failed a check</td><td><code>-k</code> or <code>NODE_TLS_REJECT_UNAUTHORIZED=0</code></td></tr>
+  <tr><td>A 4xx status</td><td>HTTP and application</td><td>The request was wrong</td><td>Retrying the same request</td></tr>
+  <tr><td>A 5xx status</td><td>Application</td><td>The server failed</td><td>Changing client code that was correct</td></tr>
+</table>
+
+<h2>Methods</h2>
+<table>
+  <tr><th>Method</th><th>Usual meaning</th><th>Safe</th><th>Idempotent</th></tr>
+  <tr><td><code>GET</code></td><td>Read a resource</td><td>Yes</td><td>Yes</td></tr>
+  <tr><td><code>POST</code></td><td>Create something or submit data</td><td>No</td><td>No</td></tr>
+  <tr><td><code>PUT</code></td><td>Replace a resource</td><td>No</td><td>Yes</td></tr>
+  <tr><td><code>PATCH</code></td><td>Change part of a resource</td><td>No</td><td>No</td></tr>
+  <tr><td><code>DELETE</code></td><td>Remove a resource</td><td>No</td><td>Yes</td></tr>
+</table>
+<p>A safe method asks only to read. With an idempotent method, sending the same request twice has the same intended effect as sending it once, so you may retry it after a failure. Automatic retries on <code>POST</code> can create duplicate orders or charges. Sources: <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-common-method-properties">RFC 9110, section 9.2</a>, and RFC 5789 for <code>PATCH</code>.</p>
+
+<h2>Status codes</h2>
+<table>
+  <tr><th>Class</th><th>Meaning</th><th>Next step</th></tr>
+  <tr><td>2xx</td><td>Success</td><td>Use the response.</td></tr>
+  <tr><td>3xx</td><td>Redirection</td><td>Follow the <code>Location</code> header.</td></tr>
+  <tr><td>4xx</td><td>Client error</td><td>Change the request, because the same request gets the same answer.</td></tr>
+  <tr><td>5xx</td><td>Server error</td><td>Look at the server. A retry may help if the failure was temporary.</td></tr>
+</table>
+<table>
+  <tr><th>Code</th><th>Name</th><th>Typical cause</th></tr>
+  <tr><td>200</td><td>OK</td><td>The request worked, and the body has the result.</td></tr>
+  <tr><td>201</td><td>Created</td><td>A <code>POST</code> created a new resource.</td></tr>
+  <tr><td>204</td><td>No Content</td><td>The request worked, and there is no body.</td></tr>
+  <tr><td>301</td><td>Moved Permanently</td><td>The resource is at the URL in <code>Location</code>.</td></tr>
+  <tr><td>400</td><td>Bad Request</td><td>The body or parameters are malformed.</td></tr>
+  <tr><td>401</td><td>Unauthorized</td><td>The request has no valid credentials.</td></tr>
+  <tr><td>403</td><td>Forbidden</td><td>The credentials don't allow this action.</td></tr>
+  <tr><td>404</td><td>Not Found</td><td>Nothing exists at this path.</td></tr>
+  <tr><td>405</td><td>Method Not Allowed</td><td>The path doesn't accept this method.</td></tr>
+  <tr><td>429</td><td>Too Many Requests</td><td>You hit a rate limit.</td></tr>
+  <tr><td>500</td><td>Internal Server Error</td><td>The server's code failed.</td></tr>
+  <tr><td>503</td><td>Service Unavailable</td><td>The server is overloaded or down.</td></tr>
+</table>
+<p><code>fetch()</code> rejects its promise only when the network fails, so for a 404 or a 500 your code has to check <code>response.ok</code> (<a href="https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch">MDN, Using the Fetch API</a>). A response with status 200 and an error message in the body is a defect, because clients trust the status code.</p>
+
+<h2>Headers you will read most</h2>
+<table>
+  <tr><th>Header</th><th>Sent by</th><th>What it says</th></tr>
+  <tr><td><code>Content-Type</code></td><td>Both</td><td>The format of the body, e.g., <code>application/json</code></td></tr>
+  <tr><td><code>Authorization</code></td><td>Client</td><td>The credentials, e.g., <code>Bearer &lt;token&gt;</code></td></tr>
+  <tr><td><code>Cache-Control</code></td><td>Server</td><td>How long the response may be reused</td></tr>
+  <tr><td><code>Location</code></td><td>Server</td><td>Where a redirected or new resource is</td></tr>
+  <tr><td><code>Set-Cookie</code></td><td>Server</td><td>A cookie for the browser to store (Module 4)</td></tr>
+  <tr><td><code>x-ratelimit-*</code></td><td>Server</td><td>Your rate limit and how much of it is left (not standard, but common)</td></tr>
+</table>
+
+<h2>CORS errors in the browser console</h2>
+<p>The messages below were captured in Chromium 151. Only the browser enforces CORS, and curl ignores it, so a working curl request is not proof that CORS is fixed.</p>
+<table>
+  <tr><th>Console message contains</th><th>Meaning</th></tr>
+  <tr><td>No 'Access-Control-Allow-Origin' header is present</td><td>The API sent no CORS header, so the browser hid the response from your script.</td></tr>
+  <tr><td>Response to preflight request doesn't pass access control check</td><td>The browser's <code>OPTIONS</code> request failed, so it never sent the real request.</td></tr>
+  <tr><td>must not be the wildcard '*' when the request's credentials mode is 'include'</td><td>The API answered with <code>*</code>, but the request carried cookies, which the browser forbids.</td></tr>
+  <tr><td>Access-Control-Allow-Credentials ... must be 'true'</td><td>The API named your origin but didn't allow credentials.</td></tr>
+</table>
+<p>A third-party API that sends no CORS headers can't be fixed from the browser. Call it from your own server instead, which Module 2 covers. Source: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS">MDN, CORS</a>.</p>
+
+<div class="footer-nav">
+Lessons: <a href="../lessons/0005-reading-one-request.html">5</a>, <a href="../lessons/0006-http-methods-status-headers.html">6</a>, <a href="../lessons/0007-same-origin-and-cors.html">7</a><br>
+<a href="../lessons/index.html">Course index</a>, <a href="glossary.html">Glossary</a>, <a href="agent-failure-catalog.html">Agent failure catalog</a>
+</div>
